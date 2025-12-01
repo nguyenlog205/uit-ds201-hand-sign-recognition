@@ -8,10 +8,9 @@ import torch.nn as nn
 from typing import Dict, Any, Optional
 import numpy as np
 
-from ..data.graph_constructor import SkeletonGraph
+from ..data.gcn.graph_constructor import SkeletonGraph
 from .stgcn import STGCN, create_stgcn_model
 from .ha_gcn import HAGCN, create_hagcn_model
-from .base_gcn import BaseGCN
 
 
 def create_model(config: Dict[str, Any], num_classes: Optional[int] = None) -> nn.Module:
@@ -64,7 +63,7 @@ def create_stgcn_from_config(
         num_class = model_config.get('num_class', 100)
     
     # Graph configuration
-    skeleton_layout = model_config.get('skeleton_layout', 'sign_language_27')
+    skeleton_layout = model_config.get('skeleton_layout', 'sign_language_27', 'mediapipe_27')
     adjacency_strategy = model_config.get('adjacency_strategy', 'spatial')
     
     # Create skeleton graph and get adjacency matrix
@@ -146,7 +145,7 @@ def create_hagcn_from_config(
         num_class = model_config.get('num_class', 100)
     
     # Graph configuration
-    skeleton_layout = model_config.get('skeleton_layout', 'sign_language_27')
+    skeleton_layout = model_config.get('skeleton_layout', 'sign_language_27', 'mediapipe_27')
     adjacency_strategy = model_config.get('adjacency_strategy', 'spatial')
     
     # Create skeleton graph and get adjacency matrix
