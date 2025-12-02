@@ -1,0 +1,8 @@
+# DATA_PATH
+DATA_PATH:
+  - DATA_PATH: './data'
+
+DATA_CONFIGURATION:
+  - fps: 30
+  - height: 800
+  - width: 800
