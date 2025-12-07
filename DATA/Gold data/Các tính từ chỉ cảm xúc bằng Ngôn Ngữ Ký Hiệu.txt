@@ -1,0 +1,7 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/Các tính từ chỉ cảm xúc bằng Ngôn Ngữ Ký Hiệu.mp4 -- offset: 0, duration: 00:07:40.382 / 460.382 / 460382, ms per sample: 33.36666666666667"
+
+default		16810	17950	1140	xinchao
+default		18840	19420	580	toi
+default		19610	20120	510	ten
+default		24540	25110	570	ten
+default		28700	29180	480	toi

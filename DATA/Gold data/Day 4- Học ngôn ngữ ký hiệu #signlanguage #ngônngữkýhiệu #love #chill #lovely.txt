@@ -1,0 +1,8 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/Day 4- Học ngôn ngữ ký hiệu #signlanguage #ngônngữkýhiệu #love #chill #lovely.mp4 -- offset: 0, duration: 00:03:04.157 / 184.157 / 184157, ms per sample: 33.4213"
+
+default		5590	6630	1040	xinchao
+default		164600	165310	710	toi
+default		165560	166430	870	ten
+default		166700	167320	620	toi
+default		167660	169140	1480	tuoi
+default		169640	170400	760	toi
