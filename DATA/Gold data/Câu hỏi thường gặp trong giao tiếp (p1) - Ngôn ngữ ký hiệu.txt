@@ -1,0 +1,24 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/Câu hỏi thường gặp trong giao tiếp (p1) - Ngôn ngữ ký hiệu.mp4 -- offset: 0, duration: 00:03:56.704 / 236.704 / 236704, ms per sample: 33.333333333333336"
+
+default		100	950	850	xinchao
+default		90580	91700	1120	tuoi
+default		94860	95830	970	tuoi
+default		109260	109960	700	ban
+default		113140	113850	710	ban
+default		118390	118990	600	ban
+default		123520	124050	530	ban
+default		127560	128250	690	ban
+default		131670	132390	720	ban
+default		139990	140550	560	ban
+default		152570	152990	420	ban
+default		157220	157690	470	ban
+default		164260	164920	660	ban
+default		172410	173020	610	ban
+default		178300	178990	690	ban
+default		185150	185780	630	ban
+default		190860	191600	740	ban
+default		196160	196750	590	ban
+default		210960	212180	1220	ban
+default		213060	214350	1290	tuoi
+default		216100	216750	650	ban
+default		217610	218510	900	tuoi

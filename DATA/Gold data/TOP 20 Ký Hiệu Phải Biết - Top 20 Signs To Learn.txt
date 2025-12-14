@@ -1,0 +1,14 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/TOP 20 Ký Hiệu Phải Biết - Top 20 Signs To Learn.mp4 -- offset: 0, duration: 00:04:15.442 / 255.442 / 255442, ms per sample: 41.708299999999994"
+
+default		18590	18930	340	toi
+default		18970	19740	770	ten
+default		22390	22640	250	toi
+default		22690	23030	340	ten
+default		61680	62330	650	ban
+default		68290	69560	1270	ten
+default		106390	107650	1260	co
+default		108990	110360	1370	khong
+default		134900	135890	990	xinchao
+default		136140	136500	360	toi
+default		136650	137180	530	ten
+default		144590	145060	470	toi

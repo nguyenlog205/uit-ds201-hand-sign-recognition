@@ -1,0 +1,11 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/Day 7- Học NNKH (Một chút ngữ pháp và vị trí câu) #ngônngữkýhiệu #signlanguage #love.mp4 -- offset: 0, duration: 00:02:42.586 / 162.586 / 162586, ms per sample: 33.333333333333336"
+
+default		760	2000	1240	xinchao
+default		5600	7500	1900	toi
+default		11950	12750	800	ban
+default		13000	13440	440	ban
+default		24470	25250	780	toi
+default		31540	32370	830	toi
+default		36500	37530	1030	toi
+default		41330	42260	930	toi
+default		126640	127630	990	toi

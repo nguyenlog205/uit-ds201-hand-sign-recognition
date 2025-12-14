@@ -1,0 +1,4 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/Brighten Vietnamese Sign Language.mp4 -- offset: 0, duration: 00:01:55.751 / 115.751 / 115751, ms per sample: 41.708299999999994"
+
+default		51120	51530	410	toi
+default		59270	59810	540	toi

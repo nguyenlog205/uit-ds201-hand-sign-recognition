@@ -1,0 +1,6 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/10 Ký hiệu Cảm Xúc Cơ Bản - Sign Language Emotions.mp4 -- offset: 0, duration: 00:02:01.138 / 121.138 / 121138, ms per sample: 33.333333333333336"
+
+default		16280	17160	880	xinchao
+default		17280	17560	280	toi
+default		17700	18060	360	ten
+default		64620	64935	315	toi
