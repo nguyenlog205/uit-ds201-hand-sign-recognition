@@ -1,0 +1,3 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/Ngôn Ngữ Ký Hiệu - Bạn sinh năm bao nhiêu.mp4 -- offset: 0, duration: 00:00:03.854 / 3.854 / 3854, ms per sample: 33.333333333333336"
+
+default		360	1040	680	

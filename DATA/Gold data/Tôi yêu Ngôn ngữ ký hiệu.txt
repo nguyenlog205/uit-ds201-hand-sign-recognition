@@ -1,0 +1,4 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/Tôi yêu Ngôn ngữ ký hiệu.mp4 -- offset: 0, duration: 00:00:58.328 / 58.328 / 58328, ms per sample: 40.0"
+
+default		1990	2340	350	toi
+default		4480	4870	390	toi

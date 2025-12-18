@@ -1,0 +1,21 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/học ngôn ngữ ký hiệu tiếng việt - giới thiệu bản thân!!!.mp4 -- offset: 0, duration: 00:00:46.742 / 46.742 / 46742, ms per sample: 33.333333333333336"
+
+default		2020	3330	1310	xinchao
+default		3700	4330	630	toi
+default		4580	5400	820	ten
+default		12400	13050	650	toi
+default		13390	14830	1440	tuoi
+default		16910	17860	950	toi
+default		18810	19430	620	song
+default		21400	22090	690	toi
+default		23870	25550	1680	vuive
+default		26530	27260	730	camon
+default		28040	28880	840	camon
+default		29410	30670	1260	xinloi
+default		31160	32380	1220	xinloi
+default		34200	36240	2040	yeuthuong
+default		36280	38620	2340	yeuthuong
+default		38800	39850	1050	bieton
+default		40120	40930	810	bieton
+default		41650	42450	800	hanhphuc
+default		42730	43670	940	

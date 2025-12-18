@@ -1,0 +1,25 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/Tên ký hiệu - Cách gọi tên của người khiếm thính.mp4 -- offset: 0, duration: 00:05:18.113 / 318.113 / 318113, ms per sample: 33.333333333333336"
+
+default		47190	47970	780	xinchao
+default		52090	52560	470	ten
+default		55510	56010	500	ten
+default		72910	74370	1460	xinchao
+default		79370	80050	680	ten
+default		83670	84430	760	ten
+default		92240	92930	690	camon
+default		113320	114140	820	xinchao
+default		118250	118430	180	toi
+default		118560	119000	440	ten
+default		125980	126340	360	camon
+default		128410	128950	540	xinchao
+default		132730	133400	670	ten
+default		143930	144470	540	xinchao
+default		164690	165060	370	xinchao
+default		187960	188710	750	xinchao
+default		219070	219520	450	xinchao
+default		233270	233750	480	xinchao
+default		238870	239420	550	toi
+default		239510	240060	550	ten
+default		250910	251680	770	xinchao
+default		260890	261240	350	ten
+default		293680	294350	670	xinchao
