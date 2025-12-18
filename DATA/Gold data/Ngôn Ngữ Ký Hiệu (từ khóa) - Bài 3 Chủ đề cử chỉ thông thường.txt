@@ -1,0 +1,25 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/Ngôn Ngữ Ký Hiệu (từ khóa) - Bài 3 Chủ đề cử chỉ thông thường.mp4 -- offset: 0, duration: 00:03:46.766 / 226.766 / 226766, ms per sample: 33.36666666666667"
+
+default		9520	9740	220	toi
+default		9930	10430	500	ten
+default		80780	82270	1490	camon
+default		83400	84840	1440	camon
+default		87510	88350	840	xinloi
+default		107070	107800	730	dong
+default		108540	109930	1390	dong
+default		113360	114440	1080	mo
+default		115080	115980	900	mo
+default		119950	121240	1290	co
+default		125140	126960	1820	khong
+default		140860	141320	460	camon
+default		143110	144220	1110	camon
+default		148800	149520	720	xinloi
+default		151700	152460	760	xinloi
+default		158640	159650	1010	cat
+default		161820	162560	740	cat
+default		176010	176870	860	dong
+default		178480	179350	870	dong
+default		183750	184180	430	mo
+default		186070	186550	480	mo
+default		194930	196230	1300	co
+default		203360	205200	1840	khong

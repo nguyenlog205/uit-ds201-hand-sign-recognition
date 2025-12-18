@@ -1,0 +1,7 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/Ngọc Quý_Giới thiệu bản thân.mp4 -- offset: 0, duration: 00:00:28.815 / 28.815 / 28815, ms per sample: 33.36666666666667"
+
+default		2740	3080	340	toi
+default		5320	5740	420	toi
+default		6170	6580	410	ten
+default		10180	10660	480	toi
+default		10890	11630	740	tuoi

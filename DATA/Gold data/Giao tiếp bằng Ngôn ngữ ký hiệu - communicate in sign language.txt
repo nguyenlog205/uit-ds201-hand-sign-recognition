@@ -1,0 +1,20 @@
+"#file:///D:/vscodepython/uit-ds201-hand-sign-recognition/DATA/Raw data/Giao tiếp bằng Ngôn ngữ ký hiệu - communicate in sign language.mp4 -- offset: 0, duration: 00:02:48.437 / 168.437 / 168437, ms per sample: 33.36666666666667"
+
+default		15740	17200	1460	toi
+default		20320	22380	2060	ten
+default		27720	28700	980	toi
+default		29170	29930	760	ten
+default		45430	46480	1050	votay
+default		49140	51380	2240	votay
+default		53670	55610	1940	xinloi
+default		59670	62740	3070	xinloi
+default		67820	70920	3100	camon
+default		76760	78630	1870	camon
+default		82240	82720	480	ban
+default		90140	92170	2030	vuive
+default		103410	105450	2040	vuive
+default		105540	107280	1740	vuive
+default		107930	109870	1940	vuive
+default		112570	114090	1520	vuive
+default		118160	118800	640	ban
+default		124470	125490	1020	ban
