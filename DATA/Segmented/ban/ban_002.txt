@@ -1,0 +1,6 @@
+{
+  "origin": "ban/ban_002.mp4",
+  "begining": 0.0,
+  "ending": 0.43333333333333335,
+  "label": 0
+}

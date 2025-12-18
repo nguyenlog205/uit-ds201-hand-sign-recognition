@@ -1,3 +1,7 @@
 /venv
 
 __pycache__/
+
+test_*.py
+run_cut_words.py
+create_test_metadata.py

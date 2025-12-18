@@ -1,20 +1,20 @@
 # HA-GCN: Hand-aware Graph Convolutional Network
 
-## Tổng quan
+## Overview
 
-**HA-GCN (Hand-aware Graph Convolutional Network)** là mô hình GCN chuyên biệt cho nhận dạng ngôn ngữ ký hiệu, được thiết kế để khai thác sâu cấu trúc bàn tay trong dữ liệu pose. Mô hình kết hợp đồ thị cơ thể (body graph) với đồ thị bàn tay (hand graphs) để tăng cường khả năng học các đặc trưng tinh tế của cử chỉ tay.
+**HA-GCN (Hand-aware Graph Convolutional Network)** is a specialized GCN model for sign language recognition, designed to deeply exploit hand structure in pose data. The model combines body graph with hand graphs to enhance the ability to learn fine-grained features of hand gestures.
 
-## Kiến trúc tổng quát
+## Overall Architecture
 
 ### Input Format
-Mô hình nhận input tensor với shape: **(N, C, T, V, M)**
+The model accepts input tensor with shape: **(N, C, T, V, M)**
 - **N**: Batch size
-- **C**: Số kênh (default là 3: x, y, confidence)
-- **T**: Số frame trong chuỗi thời gian
-- **V**: Số khớp/joints (mặc định 27 cho Mediapipe/Sign language)
-- **M**: Số người (default là 1)
+- **C**: Number of channels (default is 3: x, y, confidence)
+- **T**: Number of frames in temporal sequence
+- **V**: Number of joints (default 27 for Mediapipe/Sign language)
+- **M**: Number of people (default is 1)
 
-### Kiến trúc Pipeline
+### Architecture Pipeline
 
 ```
 Input (N, C, T, V, M)
@@ -23,8 +23,8 @@ Data Batch Normalization
     ↓
 10 × HA-GCN Blocks (layer_1 → layer_10)
     ├─ Block 1-4: 64 channels
-    ├─ Block 5-7: 128 channels (stride=2 ở block 5)
-    └─ Block 8-10: 256 channels (stride=2 ở block 8)
+    ├─ Block 5-7: 128 channels (stride=2 at block 5)
+    └─ Block 8-10: 256 channels (stride=2 at block 8)
     ↓
 Global Average Pooling (T, V)
     ↓
@@ -33,16 +33,16 @@ Fully-Connected Layer
 Output (N, num_class)
 ```
 
-## Các thành phần chính
+## Main Components
 
 ### 1. HAGCNBlock (`ha_gcn.py`)
 
-Mỗi block HA-GCN bao gồm 4 thành phần chính:
+Each HA-GCN block consists of 4 main components:
 
 ```
 Input
   ↓
-[HandAwareGCN] → Graph Convolution với A + SH + PH
+[HandAwareGCN] → Graph Convolution with A + SH + PH
   ↓
 [STCAttention] → Spatial-Temporal-Channel Attention (optional)
   ↓
@@ -53,58 +53,58 @@ Input
 Output
 ```
 
-**Tham số:**
-- `in_channels`, `out_channels`: Số kênh đầu vào/ra
+**Parameters:**
+- `in_channels`, `out_channels`: Input/output channel numbers
 - `A`: Body adjacency matrix (K, V, V)
-- `SH`: Structured Hand Graph (K, V, V) - cố định
+- `SH`: Structured Hand Graph (K, V, V) - fixed
 - `PH`: Parameterized Hand Graph (K, V, V) - learnable
-- `num_point`: Số joints (mặc định 27)
-- `block_size`: Kích thước block cho DropGraph (mặc định 41)
-- `stride`: Stride cho temporal convolution
-- `residual`: Có sử dụng residual connection không
-- `attention`: Có sử dụng STC attention không
+- `num_point`: Number of joints (default: 27)
+- `block_size`: Block size for DropGraph (default: 41)
+- `stride`: Stride for temporal convolution
+- `residual`: Whether to use residual connection
+- `attention`: Whether to use STC attention
 
 ### 2. HandAwareGCN (`ha_gcn.py`)
 
-**Hand-aware Graph Convolution Layer** - lớp convolution đồ thị nhận biết bàn tay.
+**Hand-aware Graph Convolution Layer** - a graph convolution layer that is aware of hand structure.
 
-**Công thức kết hợp đồ thị:**
+**Graph combination formula:**
 ```
 A_combined = A + PA + SH × α + PH × β
 ```
 
-Trong đó:
-- **A**: Body adjacency matrix (cố định, từ skeleton layout)
+Where:
+- **A**: Body adjacency matrix (fixed, from skeleton layout)
 - **PA**: Learnable body graph adjustments
-- **SH**: Structured Hand Graph (cố định, dựa trên cấu trúc vật lý của bàn tay)
-- **PH**: Parameterized Hand Graph (learnable, khởi tạo từ SH)
+- **SH**: Structured Hand Graph (fixed, based on physical hand structure)
+- **PH**: Parameterized Hand Graph (learnable, initialized from SH)
 - **α, β**: Learnable gating coefficients
 
-**Quy trình forward:**
-1. Kết hợp các đồ thị: `A_combined = A + PA + SH × α + PH × β`
-2. Áp dụng graph convolution cho từng partition (K partitions)
+**Forward process:**
+1. Combine graphs: `A_combined = A + PA + SH × α + PH × β`
+2. Apply graph convolution for each partition (K partitions)
 3. Batch normalization
-4. Residual connection (nếu cần)
+4. Residual connection (if needed)
 5. ReLU activation
 
 ### 3. HandGraphConstructor (`hierarchy.py`)
 
-Xây dựng đồ thị bàn tay cho HA-GCN.
+Constructs hand graphs for HA-GCN.
 
 #### Structured Hand Graph (SH)
-- **Định nghĩa**: Đồ thị cố định dựa trên cấu trúc vật lý của bàn tay
-- **Cấu trúc**:
-  - Left hand: nodes 7-16 (11 nodes, wrist tại 7)
-  - Right hand: nodes 17-26 (11 nodes, wrist tại 17)
-  - Kết nối: Wrist → finger bases → finger joints
-- **Đặc điểm**: Không thay đổi trong quá trình training
+- **Definition**: Fixed graph based on physical hand structure
+- **Structure**:
+  - Left hand: nodes 7-16 (11 nodes, wrist at 7)
+  - Right hand: nodes 17-26 (11 nodes, wrist at 17)
+  - Connections: Wrist → finger bases → finger joints
+- **Characteristics**: Does not change during training
 
 #### Parameterized Hand Graph (PH)
-- **Định nghĩa**: Đồ thị learnable, khởi tạo từ SH
-- **Khởi tạo**: `PH = SH + noise` (noise nhỏ để đảm bảo learnability)
-- **Đặc điểm**: Tất cả các giá trị đều là tham số có thể học
+- **Definition**: Learnable graph, initialized from SH
+- **Initialization**: `PH = SH + noise` (small noise to ensure learnability)
+- **Characteristics**: All values are learnable parameters
 
-**Cấu trúc kết nối bàn tay:**
+**Hand connection structure:**
 ```
 Left Hand (nodes 7-16):
   7 (wrist) → 8, 9, 10, 11, 12 (finger bases)
@@ -121,74 +121,74 @@ Right Hand (nodes 17-26):
 
 ### 4. STCAttention (`attention.py`)
 
-**Spatial-Temporal-Channel Attention Module** - module attention 3 chiều.
+**Spatial-Temporal-Channel Attention Module** - 3D attention module.
 
 #### Spatial Attention
-- **Mục đích**: Tập trung vào các joints quan trọng
-- **Cơ chế**: 
-  - Average pooling theo chiều thời gian: (N, C, T, V) → (N, C, V)
+- **Purpose**: Focus on important joints
+- **Mechanism**: 
+  - Average pooling along temporal dimension: (N, C, T, V) → (N, C, V)
   - 1D convolution: (N, C, V) → (N, 1, V)
   - Sigmoid activation → attention weights
-  - Áp dụng: `x = x * attention_weights + x`
+  - Apply: `x = x * attention_weights + x`
 
 #### Temporal Attention
-- **Mục đích**: Tập trung vào các frames quan trọng
-- **Cơ chế**:
-  - Average pooling theo chiều không gian: (N, C, T, V) → (N, C, T)
+- **Purpose**: Focus on important frames
+- **Mechanism**:
+  - Average pooling along spatial dimension: (N, C, T, V) → (N, C, T)
   - 1D convolution: (N, C, T) → (N, 1, T)
   - Sigmoid activation → attention weights
-  - Áp dụng: `x = x * attention_weights + x`
+  - Apply: `x = x * attention_weights + x`
 
 #### Channel Attention
-- **Mục đích**: Tập trung vào các feature channels quan trọng
-- **Cơ chế**:
+- **Purpose**: Focus on important feature channels
+- **Mechanism**:
   - Global average pooling: (N, C, T, V) → (N, C)
-  - FC layers với reduction ratio: (N, C) → (N, C//2) → (N, C)
+  - FC layers with reduction ratio: (N, C) → (N, C//2) → (N, C)
   - Sigmoid activation → attention weights
-  - Áp dụng: `x = x * attention_weights + x`
+  - Apply: `x = x * attention_weights + x`
 
 ### 5. AdaptiveDropGraph (`adaptive_dropgraph.py`)
 
-**Adaptive DropGraph** - kỹ thuật regularization thông minh kết hợp spatial và temporal dropout.
+**Adaptive DropGraph** - intelligent regularization technique combining spatial and temporal dropout.
 
 #### SpatialDropGraph
-- **Mục đích**: Drop các joints dựa trên tầm quan trọng
-- **Cơ chế**:
-  1. Tính attention map: `input_abs = mean(|x|, dim=[C, T])` → (N, V)
+- **Purpose**: Drop joints based on importance
+- **Mechanism**:
+  1. Compute attention map: `input_abs = mean(|x|, dim=[C, T])` → (N, V)
   2. Normalize attention map
-  3. Tính gamma: `γ = (1 - keep_prob) / (1 + 1.92)`
-  4. Tạo dropout mask bằng Bernoulli: `M_seed ~ Bernoulli(attention × γ)`
-  5. Propagate qua adjacency matrix: `M = M_seed @ A`
-  6. Binarize mask và áp dụng
+  3. Compute gamma: `γ = (1 - keep_prob) / (1 + 1.92)`
+  4. Generate dropout mask using Bernoulli: `M_seed ~ Bernoulli(attention × γ)`
+  5. Propagate through adjacency matrix: `M = M_seed @ A`
+  6. Binarize mask and apply
 
 #### TemporalDropGraph
-- **Mục đích**: Drop các frames dựa trên tầm quan trọng
-- **Cơ chế**:
-  1. Tính attention map: `input_abs = mean(|x|, dim=[C, V])` → (N, T)
+- **Purpose**: Drop frames based on importance
+- **Mechanism**:
+  1. Compute attention map: `input_abs = mean(|x|, dim=[C, V])` → (N, T)
   2. Normalize attention map
-  3. Tính gamma: `γ = (1 - keep_prob) / block_size`
-  4. Tạo dropout mask: `M ~ Bernoulli(attention × γ)`
-  5. Max pooling để tạo block dropout: `Msum = MaxPool1d(M, kernel=block_size)`
-  6. Áp dụng mask
+  3. Compute gamma: `γ = (1 - keep_prob) / block_size`
+  4. Generate dropout mask: `M ~ Bernoulli(attention × γ)`
+  5. Max pooling to create block dropout: `Msum = MaxPool1d(M, kernel=block_size)`
+  6. Apply mask
 
 #### AdaptiveDropGraph
-- **Kết hợp**: `y = γ × SpatialDrop(x) + (1-γ) × x`
-- **Sau đó**: `y = δ × TemporalDrop(y) + (1-δ) × y`
+- **Combination**: `y = γ × SpatialDrop(x) + (1-γ) × x`
+- **Then**: `y = δ × TemporalDrop(y) + (1-δ) × y`
 - **γ, δ**: Learnable gating coefficients
 
-## Cấu hình mô hình
+## Model Configuration
 
-### Khởi tạo từ config
+### Initialization from Config
 
-Mô hình được tạo thông qua factory function:
+The model is created through factory function:
 
 ```python
 from src.model.gcn_model_factory import create_model
 
-model = create_model(config)  # nếu config["model"]["type"] = "ha_gcn"
+model = create_model(config)  # if config["model"]["type"] = "ha_gcn"
 ```
 
-Hoặc trực tiếp:
+Or directly:
 
 ```python
 from src.model.gcn_model_factory import create_hagcn_from_config
@@ -196,28 +196,28 @@ from src.model.gcn_model_factory import create_hagcn_from_config
 model = create_hagcn_from_config(config, num_classes=None)
 ```
 
-### Các tham số cấu hình
+### Configuration Parameters
 
-Trong `config["model"]`:
+In `config["model"]`:
 
-- `in_channels`: Số kênh đầu vào (mặc định: 3)
-- `num_nodes`: Số joints (mặc định: 27)
-- `num_person`: Số người (mặc định: 1)
-- `window_size`: Kích thước cửa sổ thời gian
-- `num_class`: Số lớp phân loại
-- `skeleton_layout`: Layout skeleton (ví dụ: `"mediapipe_27"`)
-- `adjacency_strategy`: Chiến lược tạo adjacency matrix (ví dụ: `"spatial"`)
-- `block_size`: Kích thước block cho DropGraph (mặc định: 41)
-- `use_attention`: Bật/tắt STC attention (mặc định: True)
+- `in_channels`: Number of input channels (default: 3)
+- `num_nodes`: Number of joints (default: 27)
+- `num_person`: Number of people (default: 1)
+- `window_size`: Temporal window size
+- `num_class`: Number of classification classes
+- `skeleton_layout`: Skeleton layout (e.g., `"mediapipe_27"`)
+- `adjacency_strategy`: Adjacency matrix creation strategy (e.g., `"spatial"`)
+- `block_size`: Block size for DropGraph (default: 41)
+- `use_attention`: Enable/disable STC attention (default: True)
 
-### Khởi tạo trực tiếp
+### Direct Initialization
 
 ```python
 from src.model.ha_gcn import HAGCN
 import torch
 
-# Tạo adjacency matrix A (K, V, V)
-A = ...  # từ SkeletonGraph hoặc config
+# Create adjacency matrix A (K, V, V)
+A = ...  # from SkeletonGraph or config
 
 model = HAGCN(
     in_channels=3,
@@ -231,7 +231,7 @@ model = HAGCN(
 )
 ```
 
-## Chi tiết kiến trúc
+## Architecture Details
 
 ### 10 HA-GCN Blocks
 
@@ -248,10 +248,10 @@ model = HAGCN(
 | l9    | 256           | 256            | 1      | Yes      | Yes       |
 | l10   | 256           | 256            | 1      | Yes      | Yes       |
 
-**Lưu ý**: 
-- Block l5 và l8 có stride=2 để giảm kích thước temporal
-- Block l1 không có residual connection
-- Tất cả blocks đều sử dụng STC attention (nếu `use_attention=True`)
+**Note**: 
+- Blocks l5 and l8 have stride=2 to reduce temporal size
+- Block l1 has no residual connection
+- All blocks use STC attention (if `use_attention=True`)
 
 ### Forward Pass
 
@@ -273,7 +273,7 @@ def forward(self, x, keep_prob=0.9):
     x = self.l4(x, keep_prob=1.0)
     x = self.l5(x, keep_prob=1.0)
     x = self.l6(x, keep_prob=1.0)
-    x = self.l7(x, keep_prob=keep_prob)  # Bắt đầu dropout
+    x = self.l7(x, keep_prob=keep_prob)  # Start dropout
     x = self.l8(x, keep_prob=keep_prob)
     x = self.l9(x, keep_prob=keep_prob)
     x = self.l10(x, keep_prob=keep_prob)
@@ -288,44 +288,44 @@ def forward(self, x, keep_prob=0.9):
     return x
 ```
 
-## Ưu điểm của HA-GCN
+## Advantages of HA-GCN
 
-1. **Hand-aware Design**: Tập trung vào cấu trúc bàn tay với SH và PH graphs
-2. **Multi-graph Fusion**: Kết hợp body graph (A) với hand graphs (SH, PH) một cách thông minh
-3. **Attention Mechanism**: STC attention giúp tập trung vào joints, frames và channels quan trọng
-4. **Adaptive Regularization**: Adaptive DropGraph giảm overfitting và tăng khả năng generalization
-5. **Learnable Hand Graph**: PH cho phép mô hình học các kết nối tay tối ưu cho task
+1. **Hand-aware Design**: Focuses on hand structure with SH and PH graphs
+2. **Multi-graph Fusion**: Intelligently combines body graph (A) with hand graphs (SH, PH)
+3. **Attention Mechanism**: STC attention helps focus on important joints, frames, and channels
+4. **Adaptive Regularization**: Adaptive DropGraph reduces overfitting and increases generalization ability
+5. **Learnable Hand Graph**: PH allows the model to learn optimal hand connections for the task
 
-## Khi nào sử dụng HA-GCN
+## When to Use HA-GCN
 
-- Khi muốn **khai thác mạnh vào cấu trúc bàn tay** (fine-grained hand pose)
-- Khi sequence tương đối dài và cần attention theo không gian/thời gian/kênh
-- Khi cần DropGraph để regularization (giảm overfitting)
-- Khi muốn mô hình tự học các kết nối tay tối ưu (qua PH)
+- When you want to **strongly exploit hand structure** (fine-grained hand pose)
+- When sequences are relatively long and need attention across space/time/channels
+- When DropGraph is needed for regularization (reducing overfitting)
+- When you want the model to automatically learn optimal hand connections (via PH)
 
 ## File Structure
 
 ```
 ha_gcn/
-├── __init__.py              # Exports các class chính
-├── ha_gcn_model.py          # HAGCN class - model chính
+├── __init__.py              # Exports main classes
+├── ha_gcn_model.py          # HAGCN class - main model
 ├── ha_gcn.py                # HAGCNBlock, HandAwareGCN, TemporalConv
-├── hierarchy.py             # HandGraphConstructor - tạo SH và PH
+├── hierarchy.py             # HandGraphConstructor - creates SH and PH
 ├── attention.py             # STCAttention - spatial-temporal-channel attention
 ├── adaptive_dropgraph.py    # AdaptiveDropGraph, SpatialDropGraph, TemporalDropGraph
-└── README.md                # Tài liệu này
+└── README.md                # This documentation
 ```
 
 ## Dependencies
 
 - `torch`: PyTorch framework
-- `numpy`: Xử lý arrays
-- `src.data.gcn.graph_constructor.SkeletonGraph`: Để tạo body adjacency matrix
+- `numpy`: Array processing
+- `src.data.gcn.graph_constructor.SkeletonGraph`: To create body adjacency matrix
 
-## Tham khảo
+## References
 
-Mô hình được thiết kế dựa trên các ý tưởng từ:
+The model is designed based on ideas from:
 - ST-GCN (Spatial Temporal Graph Convolutional Networks)
-- Hand-aware graph structures cho sign language recognition
+- Hand-aware graph structures for sign language recognition
 - Adaptive DropGraph regularization techniques
 - Multi-dimensional attention mechanisms

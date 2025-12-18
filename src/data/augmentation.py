@@ -1,9 +1,12 @@
 """
 Data Augmentation Module
-Augmentation techniques for graph data (temporal, spatial, noise)
+Augmentation techniques for graph data (temporal, spatial, noise) and RGB video
 """
 
 import numpy as np
+import torch
+import torchvision.transforms as transforms
+import torchvision.transforms.functional as F
 from typing import Dict, List, Optional, Union
 
 
@@ -231,10 +234,67 @@ def temporal_scale(
         scaled = scaled[:T]
     
     return scaled
+    
+
+def apply_rgb_augmentations(
+    video_tensor: torch.Tensor,
+    augmentation_configs: List[Dict],
+    is_training: bool = True
+) -> torch.Tensor:
+    """
+    Apply augmentations to RGB video tensor (C, T, H, W)
+    
+    Args:
+        video_tensor: Video tensor of shape (C, T, H, W)
+        augmentation_configs: List of augmentation configurations
+        is_training: Whether to apply augmentations (only applied if True)
+        
+    Returns:
+        Augmented video tensor
+    """
+    if not is_training or len(augmentation_configs) == 0:
+        return video_tensor
+    
+    # Convert to (T, C, H, W) for easier frame-wise processing
+    video_tensor = video_tensor.permute(1, 0, 2, 3)  # (T, C, H, W)
+    
+    for aug_config in augmentation_configs:
+        aug_type = aug_config.get('type', '')
+        
+        if aug_type == 'random_crop':
+            crop_size = aug_config.get('size', 224)
+            # Random crop for each frame (or same crop for all frames)
+            if np.random.rand() > 0.5:
+                h, w = video_tensor.shape[2], video_tensor.shape[3]
+                top = np.random.randint(0, max(1, h - crop_size))
+                left = np.random.randint(0, max(1, w - crop_size))
+                video_tensor = F.crop(video_tensor, top, left, crop_size, crop_size)
+        
+        elif aug_type == 'center_crop':
+            crop_size = aug_config.get('size', 224)
+            video_tensor = F.center_crop(video_tensor, crop_size)
+        
+        elif aug_type == 'random_horizontal_flip':
+            if np.random.rand() > 0.5:
+                video_tensor = F.hflip(video_tensor)
+        
+        elif aug_type == 'color_jitter':
+            brightness = aug_config.get('brightness', 0.1)
+            contrast = aug_config.get('contrast', 0.1)
+            saturation = aug_config.get('saturation', 0.1)
+            hue = aug_config.get('hue', 0.05)
+            jitter = transforms.ColorJitter(brightness, contrast, saturation, hue)
+            # Apply to each frame
+            for t in range(video_tensor.shape[0]):
+                video_tensor[t] = jitter(video_tensor[t])
+    
+    # Convert back to (C, T, H, W)
+    video_tensor = video_tensor.permute(1, 0, 2, 3)
+    return video_tensor
 
 
 if __name__ == "__main__":
-    # Example usage
+    # Example usage for skeleton augmentation
     T, V, C = 64, 25, 3
     poses = np.random.randn(T, V, C)
     
@@ -247,3 +307,13 @@ if __name__ == "__main__":
     augmented = apply_augmentations(poses, augmentation_configs)
     print(f"Original shape: {poses.shape}")
     print(f"Augmented shape: {augmented.shape}")
+    
+    # Example usage for RGB augmentation
+    video_tensor = torch.rand(3, 16, 224, 224)  # (C, T, H, W)
+    rgb_aug_configs = [
+        {'type': 'random_crop', 'size': 224},
+        {'type': 'random_horizontal_flip'},
+        {'type': 'color_jitter', 'brightness': 0.1, 'contrast': 0.1},
+    ]
+    augmented_video = apply_rgb_augmentations(video_tensor, rgb_aug_configs, is_training=True)
+    print(f"RGB Video shape: {augmented_video.shape}")

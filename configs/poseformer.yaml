@@ -1,0 +1,62 @@
+model:
+  type: poseformer
+  num_class: null  # Auto-detected from dataset
+  in_channels: 3
+  num_nodes: 27
+  num_person: 1
+  window_size: 64
+  dropout: 0.1
+  # CRITICAL: embed_dim_ratio controls model size
+  # embed_dim = embed_dim_ratio * num_joints
+  embed_dim_ratio: 32  # Recommended: 32-64 for skeleton data
+  depth: 4  # Number of transformer layers
+  num_heads: 8
+  mlp_ratio: 2.0  # MLP hidden dim = embed_dim * mlp_ratio
+  use_spatial_pooling: true
+  # Legacy parameters (kept for compatibility, but embed_dim_ratio takes precedence)
+  d_model: 32  # Only used if embed_dim_ratio not specified
+  nhead: 8
+  num_layers: 4
+  dim_feedforward: 2.0
+
+training:
+  batch_size: 16
+  num_epochs: 50
+  learning_rate: 0.0001
+  optimizer: adamw
+  weight_decay: 0.01
+  scheduler: warmup_cosine
+  scheduler_params: {}
+  clip_grad_norm: 1.0
+  warmup_steps: null
+  warmup_epochs: 5
+  label_smoothing: 0.1
+  dropout: null
+  eval_every: 1
+  save_every: 5
+  save_best: true
+  early_stopping_patience: 10
+  use_amp: true
+
+data:
+  raw_path: "DATA/Segmented"
+  metadata: "DATA/Segmented"
+  metadata_val: null
+  skeleton_path: null
+  dataset_type: skeleton_keypoint
+  train_val_split: 0.8
+  random_split: true
+  num_frames: 64
+  target_size: [224, 224]
+  use_imagenet_norm: false
+  normalize: true
+  skeleton_layout: mediapipe_27
+  graph_strategy: null
+  augmentations: null
+  processor_name: null
+  fps: 30.0
+
+device: cuda
+seed: 42
+output_dir: "./logs/poseformer"
+experiment_name: "poseformer_experiment"

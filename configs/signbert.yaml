@@ -1,0 +1,55 @@
+model:
+  type: signbert
+  num_class: null  # Auto-detected from dataset
+  num_joints: 27
+  num_coords: 3
+  num_frames: 64
+  embed_dim: 256
+  depth: 6
+  num_heads: 8
+  mlp_ratio: 4.0
+  drop_rate: 0.1
+  use_pretrained: false
+  pretrained_path: null  # Path to pretrained checkpoint if available
+
+training:
+  batch_size: 16
+  num_epochs: 50
+  learning_rate: 0.0001
+  optimizer: adamw
+  weight_decay: 0.01
+  scheduler: cosine
+  scheduler_params: {}
+  clip_grad_norm: 5.0
+  warmup_steps: null
+  warmup_epochs: 0
+  label_smoothing: 0.1
+  dropout: null
+  eval_every: 1
+  save_every: 5
+  save_best: true
+  early_stopping_patience: 10
+  use_amp: true
+
+data:
+  raw_path: "DATA/Segmented"
+  metadata: "DATA/Segmented"
+  metadata_val: null
+  skeleton_path: null
+  dataset_type: skeleton_keypoint
+  train_val_split: 0.8
+  random_split: true
+  num_frames: 64
+  target_size: null
+  use_imagenet_norm: false
+  normalize: true
+  skeleton_layout: mediapipe_27
+  graph_strategy: null
+  augmentations: null
+  processor_name: null
+  fps: 30.0
+
+device: cuda
+seed: 42
+output_dir: "./logs/signbert"
+experiment_name: "signbert_experiment"

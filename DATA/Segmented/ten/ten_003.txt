@@ -1,0 +1,6 @@
+{
+  "origin": "ten/ten_003.mp4",
+  "begining": 0.0,
+  "ending": 1.2512512512512513,
+  "label": 1
+}

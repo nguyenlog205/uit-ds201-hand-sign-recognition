@@ -55,7 +55,6 @@ class MediaPipePoseExtractor:
         self.num_body_keypoints = 33
         self.num_hand_keypoints = 21
         self.num_face_keypoints = 70
-        
     
     def extract_from_frame(self, frame: np.ndarray) -> Dict[str, np.ndarray]:
         """

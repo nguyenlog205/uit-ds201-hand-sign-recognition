@@ -1,20 +1,20 @@
 # ST-GCN: Spatial Temporal Graph Convolutional Networks
 
-## Tổng quan
+## Overview
 
-**ST-GCN (Spatial Temporal Graph Convolutional Networks)** là mô hình GCN chuẩn cho nhận dạng hành động và ngôn ngữ ký hiệu, học đồng thời **quan hệ không gian** (graph convolution trên joints) và **quan hệ thời gian** (temporal convolution trên frames).
+**ST-GCN (Spatial Temporal Graph Convolutional Networks)** is a standard GCN model for action recognition and sign language, learning both **spatial relationships** (graph convolution on joints) and **temporal relationships** (temporal convolution on frames) simultaneously.
 
-## Kiến trúc tổng quát
+## Overall Architecture
 
 ### Input Format
-Mô hình nhận input tensor với shape: **(N, C, T, V, M)**
+The model accepts input tensor with shape: **(N, C, T, V, M)**
 - **N**: Batch size
-- **C**: Số kênh (default là 3: x, y, confidence)
-- **T**: Số frame trong chuỗi thời gian
-- **V**: Số khớp/joints (mặc định 27 cho Mediapipe/Sign language)
-- **M**: Số người (default là 1)
+- **C**: Number of channels (default is 3: x, y, confidence)
+- **T**: Number of frames in temporal sequence
+- **V**: Number of joints (default 27 for Mediapipe/Sign language)
+- **M**: Number of people (default is 1)
 
-### Kiến trúc Pipeline
+### Architecture Pipeline
 
 ```
 Input (N, C, T, V, M)
@@ -25,8 +25,8 @@ Initial GCN + TCN (gcn0 + tcn0)
     ↓
 9 × ST-GCN Blocks (backbone)
     ├─ Block 1-3: 64 channels
-    ├─ Block 4-6: 128 channels (stride=2 ở block 4)
-    └─ Block 7-9: 256 channels (stride=2 ở block 7)
+    ├─ Block 4-6: 128 channels (stride=2 at block 4)
+    └─ Block 7-9: 256 channels (stride=2 at block 7)
     ↓
 Spatial Pooling (over joints V)
     ↓
@@ -37,110 +37,110 @@ Temporal Pooling (over frames T)
 Output (N, num_class)
 ```
 
-## Các thành phần chính
+## Main Components
 
 ### 1. STGCNBlock (`stgcn.py`)
 
-Mỗi block ST-GCN bao gồm 3 thành phần:
+Each ST-GCN block consists of 3 components:
 
 ```
 Input
   ↓
-[SpatialGCN] → Graph Convolution trên joints
+[SpatialGCN] → Graph Convolution on joints
   ↓
-[TemporalConv] → 1D Convolution trên frames
+[TemporalConv] → 1D Convolution on frames
   ↓
 [Residual Connection]
   ↓
 Output
 ```
 
-**Tham số:**
-- `in_channels`, `out_channels`: Số kênh đầu vào/ra
-- `A`: Adjacency matrix (K, V, V) với K partitions
-- `kernel_size`: Kích thước kernel cho temporal conv (mặc định: 9)
-- `stride`: Stride cho temporal convolution
-- `dropout`: Dropout rate (mặc định: 0.5)
-- `use_local_bn`: Sử dụng local batch norm per node
-- `mask_learning`: Học mask để reweight adjacency matrix
+**Parameters:**
+- `in_channels`, `out_channels`: Input/output channel numbers
+- `A`: Adjacency matrix (K, V, V) with K partitions
+- `kernel_size`: Kernel size for temporal conv (default: 9)
+- `stride`: Stride for temporal convolution
+- `dropout`: Dropout rate (default: 0.5)
+- `use_local_bn`: Use local batch norm per node
+- `mask_learning`: Learn mask to reweight adjacency matrix
 
-**Quy trình forward:**
-1. Spatial GCN: `x = gcn(x)` → Graph convolution trên joints
-2. Temporal Conv: `x = tcn(x)` → 1D convolution trên frames
-3. Residual: `x = x + downsample(input)` → Kết nối tắt
+**Forward process:**
+1. Spatial GCN: `x = gcn(x)` → Graph convolution on joints
+2. Temporal Conv: `x = tcn(x)` → 1D convolution on frames
+3. Residual: `x = x + downsample(input)` → Skip connection
 
 ### 2. SpatialGCN (`spatial_gcn.py`)
 
-**Spatial Graph Convolution** - lớp convolution đồ thị trên không gian joints.
+**Spatial Graph Convolution** - graph convolution layer on joint space.
 
 **Spatial Partitioning Strategy:**
-Đồ thị được chia thành **K partitions** (thường K=3):
-- **Partition 0**: Root node (chính nó)
-- **Partition 1**: Centripetal group (neighbors gần center của skeleton)
-- **Partition 2**: Centrifugal group (neighbors xa center của skeleton)
+The graph is divided into **K partitions** (typically K=3):
+- **Partition 0**: Root node (itself)
+- **Partition 1**: Centripetal group (neighbors closer to skeleton center)
+- **Partition 2**: Centrifugal group (neighbors farther from skeleton center)
 
-**Công thức:**
+**Formula:**
 ```
 y = Σ(k=0 to K-1) Conv(x @ A[k])
 ```
 
-Trong đó:
-- **A[k]**: Adjacency matrix cho partition k (V, V)
-- **x @ A[k]**: Matrix multiplication để aggregate neighbors
-- **Conv**: 2D convolution (kernel_size, 1) trên từng partition
-- **Σ**: Tổng hợp kết quả từ tất cả partitions
+Where:
+- **A[k]**: Adjacency matrix for partition k (V, V)
+- **x @ A[k]**: Matrix multiplication to aggregate neighbors
+- **Conv**: 2D convolution (kernel_size, 1) on each partition
+- **Σ**: Aggregate results from all partitions
 
-**Tùy chọn nâng cao:**
-- **Mask Learning**: Học mask để reweight adjacency matrix
+**Advanced options:**
+- **Mask Learning**: Learn mask to reweight adjacency matrix
   ```python
-  A_learned = A * mask  # mask là learnable parameter
+  A_learned = A * mask  # mask is learnable parameter
   ```
-- **Local Batch Norm**: Mỗi node có BN parameters riêng
+- **Local Batch Norm**: Each node has its own BN parameters
   - Global BN: `(N, C, T, V)` → BN2D
   - Local BN: `(N, C, T, V)` → `(N, C*V, T)` → BN1D → reshape back
 
-**Quy trình forward:**
-1. Áp dụng mask (nếu `mask_learning=True`): `A = A * mask`
-2. Với mỗi partition k:
+**Forward process:**
+1. Apply mask (if `mask_learning=True`): `A = A * mask`
+2. For each partition k:
    - Reshape: `(N, C, T, V)` → `(N*T*C, V)`
    - Matrix multiplication: `xa = x @ A[k]` → `(N*T*C, V)`
    - Reshape back: `(N*T*C, V)` → `(N, C, T, V)`
    - Convolution: `conv_k(xa)`
-3. Tổng hợp: `y = Σ conv_k(xa)`
-4. Batch normalization (global hoặc local)
+3. Aggregate: `y = Σ conv_k(xa)`
+4. Batch normalization (global or local)
 5. ReLU activation
 
 ### 3. TemporalConv (`temporal_conv.py`)
 
-**Temporal Convolution** - lớp convolution 1D theo chiều thời gian.
+**Temporal Convolution** - 1D convolution layer along temporal dimension.
 
-**Công thức:**
+**Formula:**
 ```
 y = ReLU(BN(Conv1D(x)))
 ```
 
-**Chi tiết:**
+**Details:**
 - **Conv2D**: `kernel_size=(kernel_size, 1)`, `stride=(stride, 1)`
-  - Convolve theo chiều T, giữ nguyên chiều V
-- **BatchNorm2D**: Normalize theo batch
-- **Dropout**: Optional dropout trước convolution
+  - Convolve along T dimension, keep V dimension unchanged
+- **BatchNorm2D**: Normalize along batch
+- **Dropout**: Optional dropout before convolution
 - **ReLU**: Activation function
 
-**Quy trình forward:**
-1. Dropout (nếu `dropout > 0`)
+**Forward process:**
+1. Dropout (if `dropout > 0`)
 2. 2D Convolution: `(N, C, T, V)` → `(N, C_out, T_out, V)`
 3. Batch Normalization
 4. ReLU activation
 
 ### 4. STGCN Model (`stgcn.py`)
 
-**Spatial Temporal Graph Convolutional Network** - model chính.
+**Spatial Temporal Graph Convolutional Network** - main model.
 
-#### Cấu trúc
+#### Structure
 
 1. **Data Batch Normalization** (optional)
-   - Normalize input data trước khi vào network
-   - Hỗ trợ multi-person: `(N, M*V*C, T)` hoặc single-person: `(N*M, V*C, T)`
+   - Normalize input data before entering network
+   - Supports multi-person: `(N, M*V*C, T)` or single-person: `(N*M, V*C, T)`
 
 2. **Initial Layers**
    - `gcn0`: Initial spatial GCN (3 → 64 channels)
@@ -148,11 +148,11 @@ y = ReLU(BN(Conv1D(x)))
 
 3. **Backbone** (9 ST-GCN Blocks)
    - Default configuration: `DEFAULT_BACKBONE`
-   - Có thể custom qua `backbone_config`
+   - Can be customized via `backbone_config`
 
 4. **Classification Head**
    - Spatial pooling: Average pool over joints `(N, C, T, V)` → `(N, C, T, 1)`
-   - Person pooling: Average over people (nếu M > 1)
+   - Person pooling: Average over people (if M > 1)
    - Temporal pooling: Average pool over frames `(N, C, T)` → `(N, C, 1)`
    - FCN: 1D convolution `(N, C, 1)` → `(N, num_class, 1)`
    - Final pooling: `(N, num_class, 1)` → `(N, num_class)`
@@ -173,19 +173,19 @@ DEFAULT_BACKBONE = [
 ]
 ```
 
-## Cấu hình mô hình
+## Model Configuration
 
-### Khởi tạo từ config
+### Initialization from Config
 
-Mô hình được tạo thông qua factory function:
+The model is created through factory function:
 
 ```python
 from src.model.gcn_model_factory import create_model
 
-model = create_model(config)  # nếu config["model"]["type"] = "stgcn"
+model = create_model(config)  # if config["model"]["type"] = "stgcn"
 ```
 
-Hoặc trực tiếp:
+Or directly:
 
 ```python
 from src.model.gcn_model_factory import create_stgcn_from_config
@@ -193,32 +193,32 @@ from src.model.gcn_model_factory import create_stgcn_from_config
 model = create_stgcn_from_config(config, num_classes=None)
 ```
 
-### Các tham số cấu hình
+### Configuration Parameters
 
-Trong `config["model"]`:
+In `config["model"]`:
 
-- `in_channels`: Số kênh đầu vào (mặc định: 3)
-- `num_nodes`: Số joints (mặc định: 27)
-- `num_person`: Số người (mặc định: 1)
-- `window_size`: Kích thước cửa sổ thời gian
-- `num_class`: Số lớp phân loại
-- `skeleton_layout`: Layout skeleton (ví dụ: `"mediapipe_27"`)
-- `adjacency_strategy`: Chiến lược tạo adjacency matrix (ví dụ: `"spatial"`)
-- `use_data_bn`: Bật/tắt data batch normalization (mặc định: True)
-- `mask_learning`: Học mask để reweight adjacency (mặc định: False)
-- `use_local_bn`: Sử dụng local batch norm per node (mặc định: False)
-- `temporal_kernel_size`: Kích thước kernel cho temporal conv (mặc định: 9)
-- `dropout`: Dropout rate (mặc định: 0.5)
+- `in_channels`: Number of input channels (default: 3)
+- `num_nodes`: Number of joints (default: 27)
+- `num_person`: Number of people (default: 1)
+- `window_size`: Temporal window size
+- `num_class`: Number of classification classes
+- `skeleton_layout`: Skeleton layout (e.g., `"mediapipe_27"`)
+- `adjacency_strategy`: Adjacency matrix creation strategy (e.g., `"spatial"`)
+- `use_data_bn`: Enable/disable data batch normalization (default: True)
+- `mask_learning`: Learn mask to reweight adjacency (default: False)
+- `use_local_bn`: Use local batch norm per node (default: False)
+- `temporal_kernel_size`: Kernel size for temporal conv (default: 9)
+- `dropout`: Dropout rate (default: 0.5)
 - `backbone_config`: Custom backbone config (list of `(in_c, out_c, stride)`)
 
-### Khởi tạo trực tiếp
+### Direct Initialization
 
 ```python
 from src.model.stgcn import STGCN
 import torch
 
-# Tạo adjacency matrix A (K, V, V)
-A = ...  # từ SkeletonGraph hoặc config
+# Create adjacency matrix A (K, V, V)
+A = ...  # from SkeletonGraph or config
 
 model = STGCN(
     in_channels=3,
@@ -236,7 +236,7 @@ model = STGCN(
 )
 ```
 
-## Chi tiết kiến trúc
+## Architecture Details
 
 ### Forward Pass
 
@@ -289,73 +289,73 @@ def forward(self, x):
 
 ### Spatial Partitioning Strategy
 
-ST-GCN sử dụng **spatial partitioning** để chia neighbors của mỗi node thành các nhóm:
+ST-GCN uses **spatial partitioning** to divide neighbors of each node into groups:
 
-1. **Root partition**: Node chính nó
-2. **Centripetal partition**: Neighbors gần center của skeleton hơn
-3. **Centrifugal partition**: Neighbors xa center của skeleton hơn
+1. **Root partition**: The node itself
+2. **Centripetal partition**: Neighbors closer to skeleton center
+3. **Centrifugal partition**: Neighbors farther from skeleton center
 
-Điều này giúp mô hình học được các pattern khác nhau dựa trên hướng của kết nối trong skeleton.
+This helps the model learn different patterns based on the direction of connections in the skeleton.
 
 ### Mask Learning
 
-Khi `mask_learning=True`, mô hình học một mask để reweight adjacency matrix:
+When `mask_learning=True`, the model learns a mask to reweight the adjacency matrix:
 
 ```python
-A_learned = A * mask  # mask là learnable parameter (K, V, V)
+A_learned = A * mask  # mask is learnable parameter (K, V, V)
 ```
 
-Điều này cho phép mô hình tự động điều chỉnh tầm quan trọng của các kết nối trong đồ thị.
+This allows the model to automatically adjust the importance of connections in the graph.
 
 ### Local Batch Normalization
 
-Khi `use_local_bn=True`, mỗi node có batch normalization parameters riêng:
+When `use_local_bn=True`, each node has its own batch normalization parameters:
 
-- **Global BN**: `(N, C, T, V)` → BN2D → Tất cả nodes share parameters
-- **Local BN**: `(N, C, T, V)` → `(N, C*V, T)` → BN1D → Mỗi node có parameters riêng
+- **Global BN**: `(N, C, T, V)` → BN2D → All nodes share parameters
+- **Local BN**: `(N, C, T, V)` → `(N, C*V, T)` → BN1D → Each node has its own parameters
 
-Local BN có thể hữu ích khi các nodes có distribution khác nhau.
+Local BN can be useful when nodes have different distributions.
 
-## Ưu điểm của ST-GCN
+## Advantages of ST-GCN
 
-1. **Đơn giản và dễ hiểu**: Kiến trúc rõ ràng, dễ debug và customize
-2. **Hiệu quả**: Kết hợp spatial và temporal convolution một cách hiệu quả
-3. **Linh hoạt**: Hỗ trợ nhiều tùy chọn (mask learning, local BN, custom backbone)
-4. **Chuẩn mực**: Implementation theo paper gốc, dễ so sánh với các nghiên cứu khác
-5. **Multi-person support**: Hỗ trợ xử lý nhiều người trong cùng một frame
+1. **Simple and Easy to Understand**: Clear architecture, easy to debug and customize
+2. **Efficient**: Effectively combines spatial and temporal convolution
+3. **Flexible**: Supports many options (mask learning, local BN, custom backbone)
+4. **Standard**: Implementation follows original paper, easy to compare with other research
+5. **Multi-person Support**: Supports processing multiple people in the same frame
 
-## Khi nào sử dụng ST-GCN
+## When to Use ST-GCN
 
-- Khi có **chuỗi pose (keypoints)** và muốn dùng GCN chuẩn, đơn giản, dễ debug
-- Khi không cần cấu trúc bàn tay quá phức tạp như HA-GCN
-- Khi muốn mô hình hóa **structure cơ thể + hai tay** qua adjacency matrix
-- Khi cần bắt temporal pattern bằng convolution 1D
-- Khi muốn baseline model để so sánh với các mô hình phức tạp hơn
+- When you have **pose sequences (keypoints)** and want to use a standard, simple, easy-to-debug GCN
+- When you don't need complex hand structure like HA-GCN
+- When you want to model **body structure + two hands** via adjacency matrix
+- When you need to capture temporal patterns using 1D convolution
+- When you want a baseline model to compare with more complex models
 
 ## File Structure
 
 ```
 stgcn/
-├── __init__.py              # Exports các class chính
-├── stgcn.py                 # STGCN, STGCNBlock - model chính
+├── __init__.py              # Exports main classes
+├── stgcn.py                 # STGCN, STGCNBlock - main model
 ├── spatial_gcn.py           # SpatialGCN, UnitGCN - graph convolution
 ├── temporal_conv.py         # TemporalConv, Unit2D - temporal convolution
-└── README.md                # Tài liệu này
+└── README.md                # This documentation
 ```
 
 ## Dependencies
 
 - `torch`: PyTorch framework
 - `torch.nn.functional`: F.avg_pool2d, F.avg_pool1d
-- `src.data.gcn.graph_constructor.SkeletonGraph`: Để tạo adjacency matrix
+- `src.data.gcn.graph_constructor.SkeletonGraph`: To create adjacency matrix
 
-## Tham khảo
+## References
 
-- **Paper gốc**: [Spatial Temporal Graph Convolutional Networks for Skeleton-Based Action Recognition](https://arxiv.org/abs/1801.07455)
-- **Implementation**: Dựa trên codebase ST-GCN với adaptations cho sign language recognition
+- **Original Paper**: [Spatial Temporal Graph Convolutional Networks for Skeleton-Based Action Recognition](https://arxiv.org/abs/1801.07455)
+- **Implementation**: Based on ST-GCN codebase with adaptations for sign language recognition
 
-## Lưu ý
+## Notes
 
-- Adjacency matrix A phải có shape `(K, V, V)` với K là số partitions (thường K=3)
-- Nếu A là 2D `(V, V)`, cần expand thành `(1, V, V)` hoặc stack thành `(K, V, V)`
-- Backbone configuration có thể custom nhưng cần đảm bảo tính nhất quán về channels và strides
+- Adjacency matrix A must have shape `(K, V, V)` where K is the number of partitions (typically K=3)
+- If A is 2D `(V, V)`, need to expand to `(1, V, V)` or stack to `(K, V, V)`
+- Backbone configuration can be customized but must ensure consistency in channels and strides

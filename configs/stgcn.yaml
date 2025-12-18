@@ -1,0 +1,57 @@
+model:
+  type: stgcn
+  num_class: null  # Auto-detected from dataset
+  in_channels: 3
+  num_nodes: 27
+  num_person: 1
+  window_size: 64
+  dropout: 0.5
+  skeleton_layout: mediapipe_27
+  adjacency_strategy: spatial
+  use_data_bn: true
+  mask_learning: false
+  use_local_bn: false
+  temporal_kernel_size: 9
+  backbone_config: null
+
+training:
+  batch_size: 32
+  num_epochs: 50
+  learning_rate: 0.001
+  optimizer: adam
+  weight_decay: 0.0001
+  scheduler: cosine
+  scheduler_params: {}
+  clip_grad_norm: 5.0
+  warmup_steps: null
+  warmup_epochs: 0
+  label_smoothing: 0.0
+  dropout: null
+  eval_every: 1
+  save_every: 5
+  save_best: true
+  early_stopping_patience: 10
+  use_amp: false
+
+data:
+  raw_path: "DATA/Segmented"
+  metadata: "DATA/Segmented"
+  metadata_val: null  # Optional: separate validation metadata path
+  skeleton_path: null
+  dataset_type: skeleton_graph
+  train_val_split: 0.8  # Train/val split ratio (if metadata_val is None)
+  random_split: true  # Use random split (if metadata_val is None)
+  num_frames: 64
+  target_size: [224, 224]
+  use_imagenet_norm: false
+  normalize: true
+  skeleton_layout: mediapipe_27
+  graph_strategy: spatial
+  augmentations: null
+  processor_name: null
+  fps: 30.0
+
+device: cuda
+seed: 42
+output_dir: "./logs/stgcn"
+experiment_name: "stgcn_experiment"

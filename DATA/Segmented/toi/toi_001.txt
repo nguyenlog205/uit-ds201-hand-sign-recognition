@@ -1,0 +1,6 @@
+{
+  "origin": "toi/toi_001.mp4",
+  "begining": 0.0,
+  "ending": 0.52,
+  "label": 2
+}
