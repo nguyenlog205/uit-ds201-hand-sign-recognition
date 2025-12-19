@@ -487,6 +487,18 @@ def main():
     # Train
     trainer.train(output_dir=str(output_dir))
     
+    # Load best model before evaluation 
+    best_checkpoint_path = output_dir / "checkpoint_best.pth"
+    if best_checkpoint_path.exists():
+        logger.info(f"Loading best model from {best_checkpoint_path} for final evaluation...")
+        checkpoint = torch.load(best_checkpoint_path, map_location=device, weights_only=False)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        best_epoch = checkpoint.get('epoch', 0)
+        best_val_f1 = checkpoint.get('best_val_f1', 0)
+        logger.info(f"Best model loaded (F1: {best_val_f1:.4f} at epoch {best_epoch + 1})")
+    else:
+        logger.warning("Best checkpoint not found, using current model state")
+    
     # Final evaluation trên validation set
     logger.info("Running final evaluation on validation set...")
     evaluator = Evaluator(model, device=device, logger=logger)
