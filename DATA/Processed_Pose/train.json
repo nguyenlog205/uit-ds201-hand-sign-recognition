@@ -1,0 +1,230 @@
+[
+  {
+    "file_path": "train\\vuive_001.npz",
+    "label": 7,
+    "video_path": "DATA\\Segmented\\vuive\\vuive_001.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\toi_005_toi_005.npz",
+    "label": 5,
+    "video_path": "DATA\\Segmented\\toi\\toi_005.mp4",
+    "metadata_file": "DATA\\Segmented\\toi\\toi_005.txt"
+  },
+  {
+    "file_path": "train\\dong_001.npz",
+    "label": 2,
+    "video_path": "DATA\\Segmented\\dong\\dong_001.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\ban_002_ban_002.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_002.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_002.txt"
+  },
+  {
+    "file_path": "train\\ten_006.npz",
+    "label": 4,
+    "video_path": "DATA\\Segmented\\ten\\ten_006.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\vuive_004.npz",
+    "label": 7,
+    "video_path": "DATA\\Segmented\\vuive\\vuive_004.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\ban_011_ban_011.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_011.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_011.txt"
+  },
+  {
+    "file_path": "train\\ban_008_ban_008.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_008.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_008.txt"
+  },
+  {
+    "file_path": "train\\mo_001.npz",
+    "label": 3,
+    "video_path": "DATA\\Segmented\\mo\\mo_001.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\ban_007_ban_007.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_007.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_007.txt"
+  },
+  {
+    "file_path": "train\\tuoi_003.npz",
+    "label": 6,
+    "video_path": "DATA\\Segmented\\tuoi\\tuoi_003.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\ban_003_ban_003.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_003.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_003.txt"
+  },
+  {
+    "file_path": "train\\xinchao_005.npz",
+    "label": 8,
+    "video_path": "DATA\\Segmented\\xinchao\\xinchao_005.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\ten_004_ten_004.npz",
+    "label": 4,
+    "video_path": "DATA\\Segmented\\ten\\ten_004.mp4",
+    "metadata_file": "DATA\\Segmented\\ten\\ten_004.txt"
+  },
+  {
+    "file_path": "train\\mo_003.npz",
+    "label": 3,
+    "video_path": "DATA\\Segmented\\mo\\mo_003.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\xinchao_006.npz",
+    "label": 8,
+    "video_path": "DATA\\Segmented\\xinchao\\xinchao_006.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\ban_010_ban_010.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_010.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_010.txt"
+  },
+  {
+    "file_path": "train\\ten_005.npz",
+    "label": 4,
+    "video_path": "DATA\\Segmented\\ten\\ten_005.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\toi_004_toi_004.npz",
+    "label": 5,
+    "video_path": "DATA\\Segmented\\toi\\toi_004.mp4",
+    "metadata_file": "DATA\\Segmented\\toi\\toi_004.txt"
+  },
+  {
+    "file_path": "train\\xinchao_003.npz",
+    "label": 8,
+    "video_path": "DATA\\Segmented\\xinchao\\xinchao_003.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\vuive_002.npz",
+    "label": 7,
+    "video_path": "DATA\\Segmented\\vuive\\vuive_002.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\xinchao_008.npz",
+    "label": 8,
+    "video_path": "DATA\\Segmented\\xinchao\\xinchao_008.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\toi_006_toi_006.npz",
+    "label": 5,
+    "video_path": "DATA\\Segmented\\toi\\toi_006.mp4",
+    "metadata_file": "DATA\\Segmented\\toi\\toi_006.txt"
+  },
+  {
+    "file_path": "train\\toi_001_toi_001.npz",
+    "label": 5,
+    "video_path": "DATA\\Segmented\\toi\\toi_001.mp4",
+    "metadata_file": "DATA\\Segmented\\toi\\toi_001.txt"
+  },
+  {
+    "file_path": "train\\xinchao_004.npz",
+    "label": 8,
+    "video_path": "DATA\\Segmented\\xinchao\\xinchao_004.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\camon_004.npz",
+    "label": 1,
+    "video_path": "DATA\\Segmented\\camon\\camon_004.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\tuoi_004.npz",
+    "label": 6,
+    "video_path": "DATA\\Segmented\\tuoi\\tuoi_004.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\ten_003_ten_003.npz",
+    "label": 4,
+    "video_path": "DATA\\Segmented\\ten\\ten_003.mp4",
+    "metadata_file": "DATA\\Segmented\\ten\\ten_003.txt"
+  },
+  {
+    "file_path": "train\\xinchao_001.npz",
+    "label": 8,
+    "video_path": "DATA\\Segmented\\xinchao\\xinchao_001.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\ban_009_ban_009.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_009.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_009.txt"
+  },
+  {
+    "file_path": "train\\camon_001.npz",
+    "label": 1,
+    "video_path": "DATA\\Segmented\\camon\\camon_001.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\ban_014_ban_014.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_014.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_014.txt"
+  },
+  {
+    "file_path": "train\\xinchao_011.npz",
+    "label": 8,
+    "video_path": "DATA\\Segmented\\xinchao\\xinchao_011.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\ban_015_ban_015.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_015.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_015.txt"
+  },
+  {
+    "file_path": "train\\ten_008.npz",
+    "label": 4,
+    "video_path": "DATA\\Segmented\\ten\\ten_008.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\dong_004.npz",
+    "label": 2,
+    "video_path": "DATA\\Segmented\\dong\\dong_004.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "train\\ban_006_ban_006.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_006.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_006.txt"
+  },
+  {
+    "file_path": "train\\ban_016_ban_016.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_016.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_016.txt"
+  }
+]

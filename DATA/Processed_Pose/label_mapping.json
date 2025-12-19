@@ -1,0 +1,25 @@
+{
+  "label_to_folder": {
+    "0": "ban",
+    "1": "camon",
+    "2": "dong",
+    "3": "mo",
+    "4": "ten",
+    "5": "toi",
+    "6": "tuoi",
+    "7": "vuive",
+    "8": "xinchao"
+  },
+  "folder_to_label": {
+    "ban": 0,
+    "camon": 1,
+    "dong": 2,
+    "mo": 3,
+    "ten": 4,
+    "toi": 5,
+    "tuoi": 6,
+    "vuive": 7,
+    "xinchao": 8
+  },
+  "num_classes": 9
+}

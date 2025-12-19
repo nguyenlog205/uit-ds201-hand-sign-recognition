@@ -1,0 +1,62 @@
+[
+  {
+    "file_path": "val\\camon_003.npz",
+    "label": 1,
+    "video_path": "DATA\\Segmented\\camon\\camon_003.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "val\\ban_017_ban_017.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_017.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_017.txt"
+  },
+  {
+    "file_path": "val\\ban_013_ban_013.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_013.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_013.txt"
+  },
+  {
+    "file_path": "val\\mo_004.npz",
+    "label": 3,
+    "video_path": "DATA\\Segmented\\mo\\mo_004.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "val\\toi_003_toi_003.npz",
+    "label": 5,
+    "video_path": "DATA\\Segmented\\toi\\toi_003.mp4",
+    "metadata_file": "DATA\\Segmented\\toi\\toi_003.txt"
+  },
+  {
+    "file_path": "val\\tuoi_002.npz",
+    "label": 6,
+    "video_path": "DATA\\Segmented\\tuoi\\tuoi_002.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "val\\vuive_003.npz",
+    "label": 7,
+    "video_path": "DATA\\Segmented\\vuive\\vuive_003.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "val\\xinchao_010.npz",
+    "label": 8,
+    "video_path": "DATA\\Segmented\\xinchao\\xinchao_010.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "val\\ten_002_ten_002.npz",
+    "label": 4,
+    "video_path": "DATA\\Segmented\\ten\\ten_002.mp4",
+    "metadata_file": "DATA\\Segmented\\ten\\ten_002.txt"
+  },
+  {
+    "file_path": "val\\dong_003.npz",
+    "label": 2,
+    "video_path": "DATA\\Segmented\\dong\\dong_003.mp4",
+    "metadata_file": null
+  }
+]

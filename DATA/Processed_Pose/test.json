@@ -1,0 +1,92 @@
+[
+  {
+    "file_path": "test\\toi_002_toi_002.npz",
+    "label": 5,
+    "video_path": "DATA\\Segmented\\toi\\toi_002.mp4",
+    "metadata_file": "DATA\\Segmented\\toi\\toi_002.txt"
+  },
+  {
+    "file_path": "test\\ten_007.npz",
+    "label": 4,
+    "video_path": "DATA\\Segmented\\ten\\ten_007.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "test\\ban_005_ban_005.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_005.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_005.txt"
+  },
+  {
+    "file_path": "test\\xinchao_002.npz",
+    "label": 8,
+    "video_path": "DATA\\Segmented\\xinchao\\xinchao_002.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "test\\dong_002.npz",
+    "label": 2,
+    "video_path": "DATA\\Segmented\\dong\\dong_002.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "test\\ban_012_ban_012.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_012.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_012.txt"
+  },
+  {
+    "file_path": "test\\xinchao_009.npz",
+    "label": 8,
+    "video_path": "DATA\\Segmented\\xinchao\\xinchao_009.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "test\\tuoi_001.npz",
+    "label": 6,
+    "video_path": "DATA\\Segmented\\tuoi\\tuoi_001.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "test\\mo_002.npz",
+    "label": 3,
+    "video_path": "DATA\\Segmented\\mo\\mo_002.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "test\\camon_002.npz",
+    "label": 1,
+    "video_path": "DATA\\Segmented\\camon\\camon_002.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "test\\xinchao_007.npz",
+    "label": 8,
+    "video_path": "DATA\\Segmented\\xinchao\\xinchao_007.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "test\\ten_001_ten_001.npz",
+    "label": 4,
+    "video_path": "DATA\\Segmented\\ten\\ten_001.mp4",
+    "metadata_file": "DATA\\Segmented\\ten\\ten_001.txt"
+  },
+  {
+    "file_path": "test\\vuive_005.npz",
+    "label": 7,
+    "video_path": "DATA\\Segmented\\vuive\\vuive_005.mp4",
+    "metadata_file": null
+  },
+  {
+    "file_path": "test\\ban_004_ban_004.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_004.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_004.txt"
+  },
+  {
+    "file_path": "test\\ban_001_ban_001.npz",
+    "label": 0,
+    "video_path": "DATA\\Segmented\\ban\\ban_001.mp4",
+    "metadata_file": "DATA\\Segmented\\ban\\ban_001.txt"
+  }
+]
