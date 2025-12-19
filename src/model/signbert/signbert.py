@@ -98,12 +98,14 @@ class SignBERT(nn.Module):
     """
     SignBERT: Pretrained Transformer for Sign Language Recognition
     
-    Architecture:
-    1. Input embedding (keypoint features + positional encoding)
-    2. Transformer encoder blocks
-    3. Classification head
+    Architecture (SignBERT-style):
+    1. Skeleton normalization (root centering, bone encoding, velocity)
+    2. Input embedding (keypoint features + temporal + joint + hand positional encoding)
+    3. [CLS] token (BERT-style)
+    4. Transformer encoder blocks with spatial-temporal attention
+    5. Classification head using [CLS] token
     
-    Input: Keypoint sequences (batch, frames, joints, coords) or (batch, frames, features)
+    Input: Keypoint sequences (batch, frames, joints, coords)
     Output: Classification logits
     """
     
@@ -125,6 +127,10 @@ class SignBERT(nn.Module):
         num_classes: int = 100,
         use_pretrained: bool = False,
         pretrained_path: Optional[str] = None,
+        use_cls_token: bool = True,
+        normalize_skeleton: bool = True,
+        use_velocity: bool = True,
+        use_bone: bool = True,
     ):
         """
         Args:
@@ -144,6 +150,10 @@ class SignBERT(nn.Module):
             num_classes: Number of output classes
             use_pretrained: Whether to load pretrained weights
             pretrained_path: Path to pretrained checkpoint
+            use_cls_token: Whether to use [CLS] token (BERT-style)
+            normalize_skeleton: Whether to normalize skeleton (root centering)
+            use_velocity: Whether to include velocity features (Δx)
+            use_bone: Whether to include bone vector features
         """
         super().__init__()
         
@@ -152,14 +162,42 @@ class SignBERT(nn.Module):
         self.num_frames = num_frames
         self.embed_dim = embed_dim
         self.num_classes = num_classes
+        self.use_cls_token = use_cls_token
+        self.normalize_skeleton = normalize_skeleton
+        self.use_velocity = use_velocity
+        self.use_bone = use_bone
         
-        # Input projection: (frames, joints, coords) -> (frames, embed_dim)
-        # Flatten joints and coords: num_joints * num_coords -> embed_dim
-        input_dim = num_joints * num_coords
+        # Calculate input dimension with optional features
+        # All features keep joint dimension, concatenate along channel dimension
+        # Base: coords per joint
+        # + Velocity: coords per joint (if enabled)
+        # + Bone: coords per joint (if enabled)
+        base_dim = num_coords
+        velocity_dim = num_coords if use_velocity else 0
+        bone_dim = num_coords if use_bone else 0
+        input_dim = base_dim + velocity_dim + bone_dim
+        
+        # Input projection: (frames, features) -> (frames, embed_dim)
         self.input_proj = nn.Linear(input_dim, embed_dim)
         
-        # Positional embedding
-        self.pos_embed = nn.Parameter(torch.zeros(1, num_frames, embed_dim))
+        # [CLS] token (BERT-style)
+        if use_cls_token:
+            self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+            self.cls_pos_embed = nn.Parameter(torch.zeros(1, 1, embed_dim))
+            nn.init.trunc_normal_(self.cls_token, std=0.02)
+            nn.init.trunc_normal_(self.cls_pos_embed, std=0.02)
+        
+        # Positional embeddings
+        # 1. Temporal positional embedding (frame position)
+        self.temporal_pos_embed = nn.Parameter(torch.zeros(1, num_frames, embed_dim))
+        
+        # 2. Joint positional embedding (joint position in skeleton)
+        self.joint_pos_embed = nn.Parameter(torch.zeros(1, num_joints, embed_dim))
+        
+        # 3. Hand-aware embedding (left/right hand, body)
+        # For MediaPipe 27: 0=neck, 1-2=shoulders, 3-4=elbows, 5-15=left_hand, 16-26=right_hand
+        self.hand_type_embed = nn.Embedding(3, embed_dim)  # 0=body, 1=left_hand, 2=right_hand
+        
         self.pos_drop = nn.Dropout(p=drop_rate)
         
         # Transformer blocks
@@ -181,7 +219,7 @@ class SignBERT(nn.Module):
         
         self.norm = norm_layer(embed_dim)
         
-        # Classification head
+        # Classification head (uses [CLS] token if enabled, otherwise GAP)
         self.head = nn.Sequential(
             nn.LayerNorm(embed_dim),
             nn.Dropout(drop_rate),
@@ -200,8 +238,12 @@ class SignBERT(nn.Module):
     
     def _init_weights(self):
         """Initialize weights"""
-        # Positional embedding
-        nn.init.trunc_normal_(self.pos_embed, std=0.02)
+        # Positional embeddings
+        nn.init.trunc_normal_(self.temporal_pos_embed, std=0.02)
+        nn.init.trunc_normal_(self.joint_pos_embed, std=0.02)
+        
+        # Hand type embedding
+        nn.init.normal_(self.hand_type_embed.weight, std=0.02)
         
         # Input projection
         nn.init.trunc_normal_(self.input_proj.weight, std=0.02)
@@ -217,6 +259,153 @@ class SignBERT(nn.Module):
             elif isinstance(m, nn.LayerNorm):
                 nn.init.constant_(m.weight, 1.0)
                 nn.init.constant_(m.bias, 0)
+    
+    def _normalize_skeleton(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Normalize skeleton: root centering, scale normalization
+        
+        Args:
+            x: (B, T, V, C) skeleton sequence
+        
+        Returns:
+            Normalized skeleton (B, T, V, C)
+        """
+        if not self.normalize_skeleton:
+            return x
+        
+        # Root centering: subtract root joint (neck, index 0)
+        root = x[:, :, 0:1, :]  # (B, T, 1, C)
+        x = x - root
+        
+        # Scale normalization: normalize by shoulder width
+        # Shoulders are typically at indices 1 (left) and 2 (right)
+        if x.shape[2] > 2:
+            left_shoulder = x[:, :, 1:2, :2]  # (B, T, 1, 2) - only x, y
+            right_shoulder = x[:, :, 2:3, :2]  # (B, T, 1, 2)
+            shoulder_width = torch.norm(left_shoulder - right_shoulder, dim=-1, keepdim=True)  # (B, T, 1, 1)
+            shoulder_width = torch.clamp(shoulder_width, min=1e-6)  # Avoid division by zero
+            scale = shoulder_width.median(dim=1, keepdim=True)[0]  # (B, 1, 1, 1)
+            x = x / (scale * 1.2)  # 1.2 padding factor
+        
+        return x
+    
+    def _get_skeleton_parents(self) -> list:
+        """
+        Get parent indices for each joint based on skeleton topology
+        
+        Returns:
+            parents: List of parent indices (-1 for root)
+        """
+        # MediaPipe 27 skeleton structure
+        # Based on edges from SkeletonGraph
+        # 0: Neck (root, no parent)
+        # 1-2: Shoulders (parent: 0)
+        # 3-4: Elbows (parents: 1, 2)
+        # 5: Left Wrist (parent: 3)
+        # 6-15: Left Hand fingers (parent: 5 for most, or previous in chain)
+        # 16: Right Wrist (parent: 4)
+        # 17-26: Right Hand fingers (parent: 16 for most, or previous in chain)
+        
+        if self.num_joints == 27:
+            parents = [-1,  # 0: Neck (root)
+                       0,   # 1: Left Shoulder
+                       0,   # 2: Right Shoulder
+                       1,   # 3: Left Elbow
+                       2,   # 4: Right Elbow
+                       3,   # 5: Left Wrist
+                       5,   # 6: Left Thumb MCP
+                       6,   # 7: Left Thumb Tip
+                       5,   # 8: Left Index MCP
+                       8,   # 9: Left Index Tip
+                       5,   # 10: Left Middle MCP
+                       10,  # 11: Left Middle Tip
+                       5,   # 12: Left Ring MCP
+                       12,  # 13: Left Ring Tip
+                       5,   # 14: Left Pinky MCP
+                       14,  # 15: Left Pinky Tip
+                       4,   # 16: Right Wrist
+                       16,  # 17: Right Thumb MCP
+                       17,  # 18: Right Thumb Tip
+                       16,  # 19: Right Index MCP
+                       19,  # 20: Right Index Tip
+                       16,  # 21: Right Middle MCP
+                       21,  # 22: Right Middle Tip
+                       16,  # 23: Right Ring MCP
+                       23,  # 24: Right Ring Tip
+                       16,  # 25: Right Pinky MCP
+                       25]  # 26: Right Pinky Tip
+        else:
+            # Default: no parent relationships (all -1)
+            parents = [-1] * self.num_joints
+        
+        return parents
+    
+    def _compute_bone_features(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Compute bone vector features (parent-child relationships)
+        
+        Args:
+            x: (B, T, V, C) skeleton sequence
+        
+        Returns:
+            Bone features (B, T, V, C) - zero for root joint
+        """
+        B, T, V, C = x.shape
+        parents = self._get_skeleton_parents()
+        
+        # Initialize bone features
+        bones = torch.zeros_like(x)  # (B, T, V, C)
+        
+        # Compute bone vectors: child - parent
+        for j in range(V):
+            parent_idx = parents[j]
+            if parent_idx >= 0:
+                bones[:, :, j, :] = x[:, :, j, :] - x[:, :, parent_idx, :]
+            # Root joint (parent_idx == -1) remains zero
+        
+        return bones
+    
+    def _compute_velocity_features(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Compute velocity features (temporal differences)
+        
+        Args:
+            x: (B, T, V, C) skeleton sequence
+        
+        Returns:
+            Velocity features (B, T, V, C)
+        """
+        # Compute velocity: difference between consecutive frames
+        velocity = torch.zeros_like(x)
+        velocity[:, 1:, :, :] = x[:, 1:, :, :] - x[:, :-1, :, :]
+        return velocity
+    
+    def _get_hand_type_indices(self) -> torch.Tensor:
+        """
+        Get hand type indices for each joint
+        0 = body, 1 = left_hand, 2 = right_hand
+        
+        Returns:
+            (V,) tensor with hand type for each joint
+        """
+        hand_types = torch.zeros(self.num_joints, dtype=torch.long)
+        
+        # MediaPipe 27 layout:
+        # 0: neck (body)
+        # 1-2: shoulders (body)
+        # 3-4: elbows (body)
+        # 5-15: left hand (11 points)
+        # 16-26: right hand (11 points)
+        
+        if self.num_joints == 27:
+            hand_types[0:5] = 0  # body (neck, shoulders, elbows)
+            hand_types[5:16] = 1  # left hand
+            hand_types[16:27] = 2  # right hand
+        else:
+            # Default: all body
+            hand_types[:] = 0
+        
+        return hand_types
     
     def load_pretrained(self, pretrained_path: str):
         """Load pretrained weights"""
@@ -248,42 +437,89 @@ class SignBERT(nn.Module):
         Forward pass
         
         Args:
-            x: Input tensor of shape (batch, frames, joints, coords) or (batch, frames, features)
+            x: Input tensor of shape (batch, frames, joints, coords)
         
         Returns:
             Classification logits of shape (batch, num_classes)
         """
         B = x.shape[0]
         
-        # Handle different input formats
-        if x.dim() == 4:
-            # (batch, frames, joints, coords)
-            T, V, C = x.shape[1], x.shape[2], x.shape[3]
-            x = x.view(B, T, V * C)  # (batch, frames, joints*coords)
-        elif x.dim() == 3:
-            # (batch, frames, features) - already flattened
-            pass
-        else:
-            raise ValueError(f"Expected input shape (B, T, V, C) or (B, T, F), got {x.shape}")
+        # Validate input shape
+        if x.dim() != 4:
+            raise ValueError(f"Expected input shape (B, T, V, C), got {x.shape}")
+        
+        T, V, C = x.shape[1], x.shape[2], x.shape[3]
+        
+        # 1. Skeleton normalization
+        x = self._normalize_skeleton(x)  # (B, T, V, C)
+        
+        # 2. Extract features: base + velocity + bone
+        # CRITICAL: Keep joint dimension (V) when concatenating features
+        features_list = [x]  # Base features (B, T, V, C)
+        
+        if self.use_velocity:
+            velocity = self._compute_velocity_features(x)  # (B, T, V, C)
+            features_list.append(velocity)
+        
+        if self.use_bone:
+            bones = self._compute_bone_features(x)  # (B, T, V, C)
+            features_list.append(bones)
+        
+        # Concatenate features along channel dimension (keep joint dimension)
+        x_features = torch.cat(features_list, dim=-1)  # (B, T, V, C')
+        # C' = C (base) + C (velocity if enabled) + C (bone if enabled)
+        
+        # 3. Restructure to joint-level tokens: (B, T, V, C') -> (B, T*V, C')
+        # Each token represents a (frame, joint) pair for proper spatial-temporal modeling
+        x_features = x_features.view(B, T * V, -1)  # (B, T*V, C')
         
         # Project to embedding dimension
-        x = self.input_proj(x)  # (batch, frames, embed_dim)
+        x = self.input_proj(x_features)  # (B, T*V, embed_dim)
         
-        # Add positional embedding
-        x = x + self.pos_embed
+        # 4. Add positional embeddings
+        # Temporal positional embedding: repeat for each joint in frame
+        temporal_embed = self.temporal_pos_embed[:, :T, :]  # (1, T, embed_dim)
+        temporal_embed = temporal_embed.repeat(1, V, 1)  # (1, T*V, embed_dim)
+        x = x + temporal_embed
+        
+        # Joint positional embedding: repeat for each frame
+        joint_embed = self.joint_pos_embed  # (1, V, embed_dim)
+        joint_embed = joint_embed.repeat(1, T, 1)  # (1, T*V, embed_dim)
+        x = x + joint_embed
+        
+        # Hand type embedding
+        hand_types = self._get_hand_type_indices().to(x.device)  # (V,)
+        hand_embed = self.hand_type_embed(hand_types)  # (V, embed_dim)
+        hand_embed = hand_embed.repeat(T, 1)  # (T*V, embed_dim)
+        hand_embed = hand_embed.unsqueeze(0).expand(B, -1, -1)  # (B, T*V, embed_dim)
+        x = x + hand_embed
+        
         x = self.pos_drop(x)
         
-        # Apply transformer blocks
+        # 5. Add [CLS] token (BERT-style)
+        if self.use_cls_token:
+            cls_tokens = self.cls_token.expand(B, -1, -1)  # (B, 1, embed_dim)
+            # Add CLS positional embedding
+            if hasattr(self, 'cls_pos_embed'):
+                cls_tokens = cls_tokens + self.cls_pos_embed
+            x = torch.cat([cls_tokens, x], dim=1)  # (B, 1+T*V, embed_dim)
+        
+        # 6. Apply transformer blocks
         for blk in self.blocks:
             x = blk(x)
         
         x = self.norm(x)
         
-        # Global average pooling over temporal dimension
-        x = x.mean(dim=1)  # (batch, embed_dim)
+        # 7. Extract representation
+        if self.use_cls_token:
+            # Use [CLS] token (first token) - BERT-style
+            x = x[:, 0]  # (B, embed_dim)
+        else:
+            # Global average pooling over all tokens
+            x = x.mean(dim=1)  # (B, embed_dim)
         
-        # Classification head
-        x = self.head(x)  # (batch, num_classes)
+        # 8. Classification head
+        x = self.head(x)  # (B, num_classes)
         
         return x
 
@@ -300,6 +536,10 @@ def create_signbert_model(
     drop_rate: float = 0.1,
     use_pretrained: bool = False,
     pretrained_path: Optional[str] = None,
+    use_cls_token: bool = True,
+    normalize_skeleton: bool = True,
+    use_velocity: bool = True,
+    use_bone: bool = True,
     **kwargs
 ) -> SignBERT:
     """
@@ -334,6 +574,10 @@ def create_signbert_model(
         num_classes=num_classes,
         use_pretrained=use_pretrained,
         pretrained_path=pretrained_path,
+        use_cls_token=use_cls_token,
+        normalize_skeleton=normalize_skeleton,
+        use_velocity=use_velocity,
+        use_bone=use_bone,
         **kwargs
     )
     

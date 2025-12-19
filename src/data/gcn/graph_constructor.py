@@ -289,36 +289,48 @@ class GraphConstructor:
         return final_poses
     
     def _normalize_poses(self, poses, body_raw):
-        # poses: (T, 27, 3)
-        # body_raw: (T, 33, 3) dùng để lấy hông tính toán tâm
+        """
+        Normalize poses based on the 27-keypoint structure (not body_raw)
         
+        Args:
+            poses: (T, 27, 3) - already converted to 27 keypoints
+            body_raw: (T, 33, 3) - only used to get hip reference for center calculation
+        
+        Returns:
+            Normalized poses (T, 27, 3)
+        """
         poses = poses.copy()
-        coords = poses[..., :2]
+        coords = poses[..., :2]  # (T, 27, 2)
         
-        # 1. Tính tâm (Mid-Hip) từ body_raw để ổn định
-        # MP: Left Hip 23, Right Hip 24
-        left_hip = body_raw[:, 23, :2]
-        right_hip = body_raw[:, 24, :2]
+        # 1. Calculate center from poses itself (use neck node 0 as center)
+        # Node 0 is neck, which is more stable than hip for sign language
+        center = coords[:, 0:1, :]  # (T, 1, 2) - use neck as center
         
-        # Check valid (đơn giản bằng khác 0)
-        valid_l = (left_hip[:, 0] != 0).reshape(-1, 1, 1)
-        valid_r = (right_hip[:, 0] != 0).reshape(-1, 1, 1)
+        # Subtract center (normalize to neck-centered coordinates)
+        coords = coords - center
         
-        # Tính mid_hip an toàn
-        denom = valid_l + valid_r
-        denom[denom==0] = 1
-        mid_hip = (left_hip.reshape(-1, 1, 2) * valid_l + right_hip.reshape(-1, 1, 2) * valid_r) / denom
+        # 2. Scale based on shoulder width from poses (nodes 1 and 2 are shoulders)
+        left_sh = coords[:, 1, :]   # (T, 2) - left shoulder
+        right_sh = coords[:, 2, :]  # (T, 2) - right shoulder
+        shoulder_width = np.linalg.norm(left_sh - right_sh, axis=-1)  # (T,)
         
-        # Trừ tâm
-        coords = coords - mid_hip
+        # Use median shoulder width for stable scaling
+        scale = np.median(shoulder_width[shoulder_width > 0]) if np.any(shoulder_width > 0) else 1.0
         
-        # 2. Scale theo độ rộng vai 
-        left_sh = coords[:, 1, :]
-        right_sh = coords[:, 2, :]
-        width = np.linalg.norm(left_sh - right_sh, axis=-1)
-        scale = np.median(width[width > 0]) if np.any(width > 0) else 1.0
+        # Normalize with padding factor
+        if scale > 0:
+            poses[..., :2] = coords / (scale * 1.2)  # 1.2 padding factor
+        else:
+            # Fallback: use body_raw hip if shoulder width is invalid
+            left_hip = body_raw[:, 23, :2] if body_raw.shape[1] > 23 else coords[:, 0, :]
+            right_hip = body_raw[:, 24, :2] if body_raw.shape[1] > 24 else coords[:, 0, :]
+            hip_center = (left_hip + right_hip) / 2.0
+            coords = coords - hip_center.reshape(-1, 1, 2)
+            hip_width = np.linalg.norm(left_hip - right_hip, axis=-1)
+            scale = np.median(hip_width[hip_width > 0]) if np.any(hip_width > 0) else 1.0
+            if scale > 0:
+                poses[..., :2] = coords / (scale * 1.2)
         
-        poses[..., :2] = coords / (scale * 1.2) # 1.2 padding
         return poses
     
     def _adjacency_to_edge_index(self, A: np.ndarray) -> np.ndarray:

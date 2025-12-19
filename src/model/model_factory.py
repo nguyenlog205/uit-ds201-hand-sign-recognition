@@ -113,7 +113,13 @@ def create_stgcn_from_config(
     backbone_config = model_config.get('backbone_config', None)
     if backbone_config is not None:
         # Convert list of lists to list of tuples
-        backbone_config = [tuple(c) for c in backbone_config]
+        if isinstance(backbone_config[0], (list, tuple)):
+            backbone_config = [tuple(c) for c in backbone_config]
+        # If already tuples, keep as is
+    else:
+        # Use lightweight backbone by default for small datasets
+        from .stgcn.stgcn import DEFAULT_BACKBONE_SMALL
+        backbone_config = DEFAULT_BACKBONE_SMALL
     
     # Create model
     model = STGCN(
@@ -187,6 +193,13 @@ def create_hagcn_from_config(
     # Model options
     block_size = model_config.get('block_size', 41)
     use_attention = model_config.get('use_attention', True)
+    num_blocks = model_config.get('num_blocks', None)
+    freeze_graph = model_config.get('freeze_graph', False)
+    
+    # Use lightweight architecture (6 blocks) by default for small datasets
+    # Can be overridden in config
+    if num_blocks is None:
+        num_blocks = 6  # Lightweight for small datasets
     
     # Create model
     model = HAGCN(
@@ -198,6 +211,8 @@ def create_hagcn_from_config(
         A=A,
         block_size=block_size,
         use_attention=use_attention,
+        num_blocks=num_blocks,
+        freeze_graph=freeze_graph,
     )
     
     return model
@@ -433,6 +448,12 @@ def create_signbert_from_config(
     use_pretrained = model_config.get('use_pretrained', False)
     pretrained_path = model_config.get('pretrained_path', None)
     
+    # SignBERT-specific parameters
+    use_cls_token = model_config.get('use_cls_token', True)
+    normalize_skeleton = model_config.get('normalize_skeleton', True)
+    use_velocity = model_config.get('use_velocity', True)
+    use_bone = model_config.get('use_bone', True)
+    
     # Number of classes
     if num_classes is not None:
         num_class = num_classes
@@ -452,6 +473,10 @@ def create_signbert_from_config(
         drop_rate=drop_rate,
         use_pretrained=use_pretrained,
         pretrained_path=pretrained_path,
+        use_cls_token=use_cls_token,
+        normalize_skeleton=normalize_skeleton,
+        use_velocity=use_velocity,
+        use_bone=use_bone,
     )
     
     return model
@@ -475,7 +500,7 @@ def create_i3d_from_config(
     
     # Extract parameters
     in_channels = model_config.get('in_channels', 3)
-    dropout_keep_prob = model_config.get('dropout_keep_prob', 0.5)
+    dropout_prob = model_config.get('dropout_prob', model_config.get('dropout_keep_prob', 0.5))
     use_pretrained = model_config.get('use_pretrained', False)
     pretrained_path = model_config.get('pretrained_path', None)
     
@@ -489,7 +514,7 @@ def create_i3d_from_config(
     model = create_i3d_model(
         num_classes=num_class,
         in_channels=in_channels,
-        dropout_keep_prob=dropout_keep_prob,
+        dropout_prob=dropout_prob,
         use_pretrained=use_pretrained,
         pretrained_path=pretrained_path,
     )

@@ -152,15 +152,30 @@ class GraphDataset(Dataset):
         else:
             raise ValueError(f"Unknown file format: {sample['file_path']}")
 
-        poses = self._temporal_sampling(poses)
-        if masks is not None:
-            masks = self._temporal_sampling(masks.astype(float)).astype(bool)
-
+        # Apply augmentation BEFORE temporal sampling and graph construction
+        # Augmentation should be applied to all poses (body, left_hand, right_hand)
         if self.split == "train" and len(self.augmentation) > 0:
-            poses = self._apply_augmentations(poses)
+            # Apply augmentation to each component of poses_dict
+            for key in poses_dict:
+                if poses_dict[key].shape[0] > 0:  # Check if not empty
+                    poses_dict[key] = self._apply_augmentations(poses_dict[key])
+        
+        # Temporal sampling - apply to all components consistently
+        # Only sample if data hasn't been preprocessed (i.e., T != num_frames)
+        T_orig = poses_dict["body"].shape[0]
+        if T_orig != self.num_frames:
+            # Apply temporal sampling to all components
+            for key in poses_dict:
+                poses_dict[key] = self._temporal_sampling(poses_dict[key])
+            if masks is not None:
+                masks = self._temporal_sampling(masks.astype(float)).astype(bool)
+        else:
+            # Data already preprocessed to correct length, no need to sample again
+            pass
 
+        # Construct graph from augmented and sampled poses
         graph_data = self.graph_constructor.construct_graph_from_poses(
-            poses_dict if "left_hand" in poses_dict else {"body": poses},
+            poses_dict,
             strategy=self.graph_strategy,
             masks=masks,
         )
@@ -236,12 +251,14 @@ class GraphCollateFn:
         edge_index = batch[0]["edge_index"]
         adj_matrix = batch[0]["adj_matrix"]
 
+        # Edge attributes are computed but not currently used in ST-GCN
+        # They are kept for potential future use or other GCN variants
         edge_attr = torch.stack([item["edge_attr"] for item in batch])
 
         return {
             "x": x,
             "edge_index": edge_index,
-            "edge_attr": edge_attr,
+            "edge_attr": edge_attr,  # Computed but not used in current ST-GCN implementation
             "adj_matrix": adj_matrix,
             "y": y,
         }

@@ -2,12 +2,12 @@
 
 ## Overview
 
-**SignBERT** is a transformer-based model designed for sign language recognition using skeleton/keypoint sequences. The model is inspired by BERT architecture but adapted specifically for processing temporal sequences of human pose data. SignBERT can leverage pretrained weights for transfer learning, making it effective even with limited training data.
+**SignBERT** is a transformer-based model designed for sign language recognition using skeleton/keypoint sequences. The model follows BERT architecture principles adapted for skeleton data with proper spatial-temporal modeling, joint-aware embeddings, and skeleton normalization.
 
 ## Architecture
 
 ### Input Format
-The model accepts input tensor with shape: **(batch, frames, joints, coords)** or **(batch, frames, features)**
+The model accepts input tensor with shape: **(batch, frames, joints, coords)**
 - **batch**: Batch size
 - **frames**: Number of temporal frames (default: 64)
 - **joints**: Number of skeleton joints/keypoints (default: 27 for MediaPipe)
@@ -16,22 +16,38 @@ The model accepts input tensor with shape: **(batch, frames, joints, coords)** o
 ### Architecture Pipeline
 
 ```
-Input (B, T, V, C) or (B, T, F)
+Input (B, T, V, C)
     ↓
-Input Projection: (V × C) → embed_dim
+Skeleton Normalization
+    ├─ Root centering (subtract neck/root joint)
+    └─ Scale normalization (by shoulder width)
     ↓
-Positional Embedding (temporal)
+Feature Extraction
+    ├─ Base features: (T, V, C)
+    ├─ Velocity features: Δx (temporal differences)
+    └─ Bone features: parent-child vectors
+    ↓
+Input Projection: features → embed_dim
+    ↓
+Restructure: (B, T, V, embed_dim) → (B, T*V, embed_dim)
+    ↓
+Positional Embeddings
+    ├─ Temporal positional embedding (frame position)
+    ├─ Joint positional embedding (joint position)
+    └─ Hand type embedding (body/left_hand/right_hand)
+    ↓
+[CLS] Token (BERT-style)
     ↓
 N × Transformer Blocks
     ├─ Layer Normalization
-    ├─ Multi-Head Self-Attention
+    ├─ Multi-Head Self-Attention (spatial-temporal)
     ├─ Drop Path (Stochastic Depth)
     ├─ Layer Normalization
     └─ MLP (Feed-Forward)
     ↓
 Layer Normalization
     ↓
-Global Average Pooling (temporal)
+Extract [CLS] token representation
     ↓
 Classification Head
     ↓
@@ -40,18 +56,41 @@ Output (B, num_classes)
 
 ## Key Components
 
-### 1. Input Projection
-- Projects flattened keypoint features `(frames, joints × coords)` to embedding dimension
-- Linear layer: `input_dim = num_joints × num_coords → embed_dim`
+### 1. Skeleton Normalization
+- **Root Centering**: Subtracts root joint (neck) to center skeleton
+- **Scale Normalization**: Normalizes by shoulder width for scale invariance
+- Critical for sign language recognition as gestures are relative, not absolute
 
-### 2. Positional Embedding
-- Learnable positional embeddings for temporal frames
-- Shape: `(1, num_frames, embed_dim)`
-- Added to input embeddings before transformer blocks
+### 2. Feature Extraction
+- **Base Features**: Raw keypoint coordinates (B, T, V, C)
+- **Velocity Features**: Temporal differences Δx = x[t] - x[t-1] (optional, same shape)
+- **Bone Features**: Parent-child joint vectors based on skeleton topology (optional, same shape)
+  - Uses proper parent-child relationships from skeleton graph
+  - Root joint (neck) has zero bone vector
+- All features concatenated along channel dimension: (B, T, V, C') where C' = C + C_vel + C_bone
 
-### 3. Transformer Blocks
+### 3. Input Projection & Tokenization
+- Projects concatenated features to embedding dimension: `(B, T, V, C') → (B, T, V, embed_dim)`
+- **Restructures** to joint-level tokens: `(B, T, V, embed_dim) → (B, T*V, embed_dim)`
+- Each token represents a (frame, joint) pair for proper spatial-temporal attention
+- **Critical**: Joint dimension is preserved during feature concatenation to maintain skeleton structure
+
+### 4. Positional Embeddings (Multi-level)
+- **Temporal Positional Embedding**: Frame position in sequence
+- **Joint Positional Embedding**: Joint position in skeleton structure
+- **Hand Type Embedding**: Body/Left Hand/Right Hand type (learnable)
+- All embeddings added to input tokens
+
+### 5. [CLS] Token (BERT-style)
+- Learnable classification token prepended to sequence
+- Has its own positional embedding (separate from frame/joint embeddings)
+- Represents global sequence representation
+- Used for final classification (instead of global average pooling)
+
+### 6. Transformer Blocks
 Each block consists of:
-- **Multi-Head Self-Attention**: Captures temporal dependencies
+- **Multi-Head Self-Attention**: Captures spatial-temporal dependencies
+  - Attention over (T*V) tokens learns both temporal and spatial relationships
   - Query, Key, Value projections
   - Scaled dot-product attention
   - Multi-head mechanism for diverse representations
@@ -61,8 +100,8 @@ Each block consists of:
 - **Drop Path (Stochastic Depth)**: Regularization technique
 - **Layer Normalization**: Applied before attention and MLP
 
-### 4. Classification Head
-- Global average pooling over temporal dimension
+### 7. Classification Head
+- Uses [CLS] token representation (not global average pooling)
 - Two-layer MLP with dropout
 - Output: Classification logits
 
@@ -79,6 +118,10 @@ Each block consists of:
 - `drop_rate` (float, default=0.1): Dropout rate
 - `use_pretrained` (bool, default=False): Load pretrained weights
 - `pretrained_path` (str, optional): Path to pretrained checkpoint
+- `use_cls_token` (bool, default=True): Use [CLS] token (BERT-style)
+- `normalize_skeleton` (bool, default=True): Apply skeleton normalization
+- `use_velocity` (bool, default=True): Include velocity features (Δx)
+- `use_bone` (bool, default=True): Include bone vector features
 
 ### Training Recommendations
 - **Learning Rate**: 0.0001 (lower than typical CNNs)
@@ -89,10 +132,13 @@ Each block consists of:
 
 ## Advantages
 
-1. **Transfer Learning**: Supports pretrained weights for better performance on small datasets
-2. **Temporal Modeling**: Self-attention mechanism captures long-range temporal dependencies
-3. **Flexible Input**: Handles both raw keypoint sequences and pre-processed features
-4. **Regularization**: Drop path and dropout prevent overfitting
+1. **SignBERT-style Architecture**: Proper spatial-temporal modeling with joint-level tokens
+2. **[CLS] Token**: BERT-style classification token for better sequence representation
+3. **Joint-aware Embeddings**: Temporal + Joint + Hand type embeddings for rich positional information
+4. **Skeleton Normalization**: Root centering and scale normalization for robust recognition
+5. **Multi-modal Features**: Base + Velocity + Bone features capture different aspects of motion
+6. **Transfer Learning**: Supports pretrained weights for better performance on small datasets
+7. **Regularization**: Drop path and dropout prevent overfitting
 
 ## Usage Example
 
@@ -123,8 +169,30 @@ output = model(x)  # (8, 3)
 python main.py --config configs/signbert.yaml
 ```
 
+## Key Improvements over Baseline Transformer
+
+### ✅ SignBERT-style Features
+1. **[CLS] Token**: Uses classification token instead of global average pooling
+2. **Joint-level Tokens**: Each token is (frame, joint) pair for spatial-temporal attention
+3. **Multi-level Positional Embeddings**: Temporal + Joint + Hand type embeddings
+4. **Skeleton Normalization**: Root centering and scale normalization
+5. **Multi-modal Features**: Base coordinates + Velocity + Bone vectors
+
+### 📊 Comparison
+
+| Feature | Baseline Transformer | SignBERT (This Implementation) |
+|---------|---------------------|-------------------------------|
+| Token Structure | Frame-level (T tokens) | Joint-level (T*V tokens) |
+| Classification | Global Average Pooling | [CLS] Token |
+| Positional Embedding | Temporal only | Temporal + Joint + Hand |
+| Skeleton Normalization | ❌ | ✅ |
+| Velocity Features | ❌ | ✅ (optional) |
+| Bone Features | ❌ | ✅ (optional) |
+| Spatial Modeling | Limited | Full spatial-temporal |
+
 ## References
 
 - Inspired by BERT architecture for sequence modeling
-- Adapted for skeleton-based sign language recognition
+- Adapted for skeleton-based sign language recognition with proper spatial-temporal modeling
 - Supports pretrained weights for transfer learning
+- Follows SignBERT paper principles (with pretraining tasks to be added)

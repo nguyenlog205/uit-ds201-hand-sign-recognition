@@ -10,6 +10,9 @@ model:
   adjacency_strategy: spatial
   block_size: 41
   use_attention: true
+  # Number of HA-GCN blocks (6 for small datasets, 10 for large)
+  num_blocks: 6
+  freeze_graph: false
 
 training:
   batch_size: 32

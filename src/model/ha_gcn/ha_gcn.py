@@ -103,6 +103,7 @@ class HandAwareGCN(nn.Module):
         SH: torch.Tensor,
         PH: torch.Tensor,
         num_subset: int = 3,
+        freeze_graph: bool = False,
     ):
         """
         Initialize HA-GC Layer
@@ -123,10 +124,13 @@ class HandAwareGCN(nn.Module):
         # Register structured hand graph (fixed)
         self.register_buffer('SH', SH.float())
         
-        # Parameterized hand graph (learnable)
-        self.PH = nn.Parameter(PH.float())
+        # Parameterized hand graph (learnable or frozen)
+        if freeze_graph:
+            self.register_buffer('PH', PH.float())  # Frozen
+        else:
+            self.PH = nn.Parameter(PH.float())  # Learnable
         
-        # Learnable body graph adjustments
+        # Learnable body graph adjustments (can be frozen for small datasets)
         self.PA = nn.Parameter(A.float())
         
         # Learnable gating coefficients
@@ -226,11 +230,12 @@ class HAGCNBlock(nn.Module):
         stride: int = 1,
         residual: bool = True,
         attention: bool = True,
+        freeze_graph: bool = False,
     ):
         super(HAGCNBlock, self).__init__()
         
         # HA-GC Layer
-        self.gcn = HandAwareGCN(in_channels, out_channels, A, SH, PH)
+        self.gcn = HandAwareGCN(in_channels, out_channels, A, SH, PH, freeze_graph=freeze_graph)
         
         # STC Attention
         self.attention = attention

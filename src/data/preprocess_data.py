@@ -59,40 +59,100 @@ def preprocess_all_videos(
         normalize=normalize
     )
     
-    # Find all metadata files (.txt)
-    metadata_pattern = os.path.join(raw_path, "**", "*.txt")
-    metadata_files = glob.glob(metadata_pattern, recursive=True)
-    metadata_files.sort()
+    # Find all video files (.mp4) in Segmented/
+    video_pattern = os.path.join(raw_path, "**", "*.mp4")
+    video_files = glob.glob(video_pattern, recursive=True)
+    video_files.sort()
     
-    print(f"\nFound {len(metadata_files)} metadata files")
+    print(f"\nFound {len(video_files)} video files")
     print(f"Input: {raw_path}")
     print(f"Output: {output_path}")
+    
+    # Create mapping from folder name to label index
+    folder_names = set()
+    for video_file in video_files:
+        folder_name = Path(video_file).parent.name
+        folder_names.add(folder_name)
+    
+    folder_names = sorted(folder_names)
+    folder_to_label = {folder: idx for idx, folder in enumerate(folder_names)}
+    label_to_folder = {idx: folder for folder, idx in folder_to_label.items()}
+    
+    print(f"\nFound {len(folder_names)} classes (folders): {folder_names}")
+    print(f"Label mapping: {folder_to_label}")
     
     # Group by class to ensure even distribution
     metadata_by_class = defaultdict(list)
     
-    for metadata_file in metadata_files:
-        try:
-            with open(metadata_file, 'r') as f:
-                try:
-                    metadata = json.load(f)
-                except json.JSONDecodeError:
-                    f.seek(0)
-                    content = f.read()
-                    metadata = eval(content)
+    # Process all videos: use existing metadata if available, otherwise create new
+    for video_file in video_files:
+        video_path = Path(video_file)
+        folder_name = video_path.parent.name
+        label = folder_to_label[folder_name]
+        
+        # Check if metadata file exists
+        metadata_file = video_path.with_suffix('.txt')
+        
+        if metadata_file.exists():
+            # Use existing metadata
+            try:
+                with open(metadata_file, 'r') as f:
+                    try:
+                        metadata = json.load(f)
+                    except json.JSONDecodeError:
+                        f.seek(0)
+                        content = f.read()
+                        metadata = eval(content)
+                
+                # Update label to match folder name
+                metadata['label'] = label
+                metadata['origin'] = str(video_path.relative_to(raw_path))
+                
+                metadata_by_class[label].append({
+                    'metadata_file': str(metadata_file),
+                    'metadata': metadata,
+                    'video_file': str(video_file)
+                })
+            except Exception as e:
+                print(f"Error reading {metadata_file}: {e}, creating new metadata")
+                # Fall through to create new metadata
+                metadata = None
+        else:
+            metadata = None
+        
+        # Create new metadata if not found
+        if metadata is None:
+            # Get video duration
+            import cv2
+            cap = cv2.VideoCapture(str(video_file))
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            duration = frame_count / fps if fps > 0 else 0.0
+            cap.release()
             
-            label = metadata['label']
+            # Create metadata
+            metadata = {
+                'origin': str(video_path.relative_to(raw_path)),
+                'begining': 0.0,
+                'ending': duration,
+                'label': label
+            }
+            
             metadata_by_class[label].append({
-                'metadata_file': metadata_file,
-                'metadata': metadata
+                'metadata_file': None,  # No metadata file
+                'metadata': metadata,
+                'video_file': str(video_file)
             })
-        except Exception as e:
-            print(f"Error reading {metadata_file}: {e}")
-            continue
     
     print(f"\nClass distribution:")
     for label, items in sorted(metadata_by_class.items()):
         print(f"   Class {label}: {len(items)} samples")
+    
+    # Check for classes with insufficient samples
+    classes_with_insufficient = [label for label, items in metadata_by_class.items() if len(items) < 3]
+    if classes_with_insufficient:
+        print(f"\n[WARNING] Classes with < 3 samples (cannot be stratified): {classes_with_insufficient}")
+        print(f"   These classes will only appear in the training set.")
     
     total_ratio = train_ratio + val_ratio + test_ratio
     if abs(total_ratio - 1.0) > 1e-6:
@@ -109,15 +169,39 @@ def preprocess_all_videos(
     random.seed(seed)
     np.random.seed(seed)
     
+    # Track classes that don't have enough samples for stratified split
+    insufficient_samples = []
+    
     for label, items in metadata_by_class.items():
         random.shuffle(items)
         total = len(items)
-        train_end = int(total * train_ratio)
-        val_end = train_end + int(total * val_ratio)
         
-        train_metadata.extend(items[:train_end])
-        val_metadata.extend(items[train_end:val_end])
-        test_metadata.extend(items[val_end:])
+        # Stratified split: ensure each class has at least 1 sample in each set
+        if total >= 3:
+            # Calculate split points based on ratios
+            train_count = max(1, int(total * train_ratio))
+            val_count = max(1, int(total * val_ratio))
+            test_count = total - train_count - val_count
+            
+            # Adjust to ensure at least 1 in each set
+            if test_count < 1:
+                # Need to take from train or val
+                if train_count > 1:
+                    train_count -= 1
+                    test_count += 1
+                elif val_count > 1:
+                    val_count -= 1
+                    test_count += 1
+            
+            # Final split
+            train_metadata.extend(items[:train_count])
+            val_metadata.extend(items[train_count:train_count + val_count])
+            test_metadata.extend(items[train_count + val_count:])
+        else:
+            # Not enough samples for stratified split (need at least 3)
+            insufficient_samples.append((label, total))
+            # Put all in train
+            train_metadata.extend(items)
     
     random.shuffle(train_metadata)
     random.shuffle(val_metadata)
@@ -127,6 +211,38 @@ def preprocess_all_videos(
     print(f"\nSplit distribution: Train={len(train_metadata)} ({len(train_metadata)/total_samples*100:.1f}%), "
           f"Val={len(val_metadata)} ({len(val_metadata)/total_samples*100:.1f}%), "
           f"Test={len(test_metadata)} ({len(test_metadata)/total_samples*100:.1f}%)")
+    
+    # Show per-class distribution
+    if insufficient_samples:
+        print(f"\n[INFO] Classes with insufficient samples (all in train):")
+        for label, count in insufficient_samples:
+            print(f"   Class {label}: {count} sample(s)")
+    
+    # Verify stratified split
+    print(f"\n[INFO] Verifying stratified split...")
+    train_labels = set()
+    val_labels = set()
+    test_labels = set()
+    
+    for item in train_metadata:
+        train_labels.add(item['metadata']['label'])
+    for item in val_metadata:
+        val_labels.add(item['metadata']['label'])
+    for item in test_metadata:
+        test_labels.add(item['metadata']['label'])
+    
+    all_labels = set(metadata_by_class.keys())
+    stratified_labels = train_labels & val_labels & test_labels
+    
+    print(f"   Total classes: {len(all_labels)}")
+    print(f"   Classes in train: {len(train_labels)}")
+    print(f"   Classes in val: {len(val_labels)}")
+    print(f"   Classes in test: {len(test_labels)}")
+    print(f"   Classes in ALL sets (stratified): {len(stratified_labels)}")
+    
+    if len(stratified_labels) < len(all_labels):
+        missing = all_labels - stratified_labels
+        print(f"   [WARNING] Classes missing from some sets: {sorted(missing)}")
     
     # Process each file
     def process_metadata_list(metadata_list, split_name):
@@ -141,13 +257,17 @@ def preprocess_all_videos(
         
         for item in tqdm(metadata_list, desc=f"Processing {split_name}"):
             try:
-                metadata_file = item['metadata_file']
+                metadata_file = item.get('metadata_file')
                 metadata = item['metadata']
+                video_file = item.get('video_file')
                 
                 video_filename = metadata['origin']
                 full_video_path = raw_path / video_filename
                 
-                if not full_video_path.exists():
+                # If video_file is provided, use it directly
+                if video_file and Path(video_file).exists():
+                    full_video_path = Path(video_file)
+                elif not full_video_path.exists():
                     print(f"Video not found: {full_video_path}")
                     error_count += 1
                     continue
@@ -156,10 +276,14 @@ def preprocess_all_videos(
                 ending = float(metadata['ending'])
                 label = metadata['label']
                 
-                # Output file name: based on original video name + hash to avoid duplicates
+                # Output file name: based on original video name
                 video_stem = Path(video_filename).stem
-                metadata_stem = Path(metadata_file).stem
-                output_file = split_output / f"{metadata_stem}_{video_stem}.npz"
+                if metadata_file:
+                    metadata_stem = Path(metadata_file).stem
+                    output_file = split_output / f"{metadata_stem}_{video_stem}.npz"
+                else:
+                    # No metadata file, use video name directly
+                    output_file = split_output / f"{video_stem}.npz"
                 
                 # Skip if file already exists
                 if output_file.exists():
@@ -168,7 +292,7 @@ def preprocess_all_videos(
                         'file_path': str(output_file.relative_to(output_path)),
                         'label': label,
                         'video_path': str(full_video_path),
-                        'metadata_file': str(metadata_file)
+                        'metadata_file': str(metadata_file) if metadata_file else None
                     })
                     continue
                 
@@ -226,7 +350,7 @@ def preprocess_all_videos(
                     'file_path': str(output_file.relative_to(output_path)),
                     'label': label,
                     'video_path': str(full_video_path),
-                    'metadata_file': str(metadata_file)
+                    'metadata_file': str(metadata_file) if metadata_file else None
                 })
                 
                 success_count += 1
@@ -263,6 +387,17 @@ def preprocess_all_videos(
     
     with open(test_json_path, 'w') as f:
         json.dump(test_files, f, indent=2)
+    
+    # Save label mapping
+    label_mapping_path = output_path / "label_mapping.json"
+    label_mapping = {
+        'label_to_folder': label_to_folder,
+        'folder_to_label': folder_to_label,
+        'num_classes': len(folder_names)
+    }
+    with open(label_mapping_path, 'w') as f:
+        json.dump(label_mapping, f, indent=2)
+    print(f"Label mapping saved: {label_mapping_path}")
     
     print("\n" + "="*60)
     print("Pre-processing completed!")

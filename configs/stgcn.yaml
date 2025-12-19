@@ -12,10 +12,16 @@ model:
   mask_learning: false
   use_local_bn: false
   temporal_kernel_size: 9
-  backbone_config: null
+  backbone_config:
+    - [64, 64, 1]
+    - [64, 64, 1]
+    - [64, 128, 2]
+    - [128, 128, 1]
+    - [128, 256, 2]
+    - [256, 256, 1]
 
 training:
-  batch_size: 32
+  batch_size: 16
   num_epochs: 50
   learning_rate: 0.001
   optimizer: adam

@@ -1,6 +1,12 @@
 import cv2
 import os
 import sys
+import io
+
+# Fix encoding cho Windows console
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 # =========================
 # Đọc file annotation
@@ -52,26 +58,32 @@ def cut_words(video_name):
     output_root = os.path.join("DATA", "Segmented")
 
     if not os.path.exists(video_path):
-        print(f"❌ Không tìm thấy video: {video_path}")
-        return
+        print(f"[ERROR] Khong tim thay video: {video_path}")
+        return False
 
     if not os.path.exists(txt_path):
-        print(f"❌ Không tìm thấy annotation: {txt_path}")
-        return
+        print(f"[ERROR] Khong tim thay annotation: {txt_path}")
+        return False
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        print("❌ Không mở được video")
-        return
+        print(f"[ERROR] Khong mo duoc video: {video_path}")
+        return False
 
     fps    = cap.get(cv2.CAP_PROP_FPS)
     width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     segments = read_annotation(txt_path)
+    if not segments:
+        print(f"[WARNING] Khong co segment nao trong file: {txt_path}")
+        cap.release()
+        return False
+
     os.makedirs(output_root, exist_ok=True)
 
     word_count = {}
+    saved_count = 0
 
     for seg in segments:
         label = seg["label"]
@@ -98,19 +110,79 @@ def cut_words(video_name):
             out.write(frame)
 
         out.release()
-        print(f"✅ Lưu: {out_path}")
+        saved_count += 1
+        print(f"  -> Luu: {out_path}")
 
     cap.release()
+    print(f"[OK] Da luu {saved_count} segment tu video: {video_name}")
+    return True
+
+
+# =========================
+# Xử lý tất cả các file
+# =========================
+def process_all():
+    gold_data_dir = os.path.join("DATA", "Gold data")
+    raw_data_dir = os.path.join("DATA", "Raw data")
+    
+    if not os.path.exists(gold_data_dir):
+        print(f"[ERROR] Khong tim thay thu muc: {gold_data_dir}")
+        return
+    
+    if not os.path.exists(raw_data_dir):
+        print(f"[ERROR] Khong tim thay thu muc: {raw_data_dir}")
+        return
+    
+    # Lấy tất cả file .txt trong Gold data
+    txt_files = [f for f in os.listdir(gold_data_dir) if f.endswith(".txt")]
+    
+    if not txt_files:
+        print("[ERROR] Khong tim thay file .txt nao trong Gold data")
+        return
+    
+    print(f"[INFO] Tim thay {len(txt_files)} file annotation")
+    print("=" * 60)
+    
+    success_count = 0
+    fail_count = 0
+    
+    for txt_file in txt_files:
+        # Tìm file video tương ứng (bỏ .txt, thêm .mp4)
+        video_name = os.path.splitext(txt_file)[0] + ".mp4"
+        video_path = os.path.join(raw_data_dir, video_name)
+        
+        if not os.path.exists(video_path):
+            print(f"[SKIP] Bo qua: Khong tim thay video tuong ung: {video_name}")
+            fail_count += 1
+            continue
+        
+        print(f"\n[DANG XU LY] {video_name}")
+        print("-" * 60)
+        
+        try:
+            if cut_words(video_name):
+                success_count += 1
+            else:
+                fail_count += 1
+        except Exception as e:
+            print(f"[ERROR] Loi khi xu ly {video_name}: {str(e)}")
+            fail_count += 1
+    
+    print("\n" + "=" * 60)
+    print(f"[TONG KET]")
+    print(f"   Thanh cong: {success_count}")
+    print(f"   That bai: {fail_count}")
+    print(f"   Tong so: {len(txt_files)}")
 
 
 # =========================
 # MAIN
 # =========================
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("❗ Cách dùng:")
-        print("   python cut_words.py <ten_video.mp4>")
-        sys.exit(1)
-
-    video_name = sys.argv[1]
-    cut_words(video_name)
+    if len(sys.argv) >= 2:
+        # Xử lý một video cụ thể
+        video_name = sys.argv[1]
+        cut_words(video_name)
+    else:
+        # Xử lý tất cả các video
+        process_all()

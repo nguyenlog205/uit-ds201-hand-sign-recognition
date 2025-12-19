@@ -14,9 +14,9 @@ from .spatial_gcn import SpatialGCN, unit_gcn
 from .temporal_conv import TemporalConv, Unit2D
 
 
-# Default backbone configuration
+# Default backbone configuration (for large datasets)
 # Format: (in_channels, out_channels, stride)
-DEFAULT_BACKBONE = [
+DEFAULT_BACKBONE_LARGE = [
     (64, 64, 1),
     (64, 64, 1),
     (64, 64, 1),
@@ -27,6 +27,19 @@ DEFAULT_BACKBONE = [
     (256, 256, 1),
     (256, 256, 1),
 ]
+
+# Lightweight backbone for small datasets (< 100 samples)
+DEFAULT_BACKBONE_SMALL = [
+    (64, 64, 1),
+    (64, 64, 1),
+    (64, 128, 2),
+    (128, 128, 1),
+    (128, 256, 2),
+    (256, 256, 1),
+]
+
+# Default uses large backbone (can be overridden in config)
+DEFAULT_BACKBONE = DEFAULT_BACKBONE_LARGE
 
 
 class STGCNBlock(nn.Module):
